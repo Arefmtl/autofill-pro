@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoFill Pro</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="logo">⚡</div>
+      <h1>AutoFill Pro</h1>
+      <p class="subtitle">پر کردن خودکار فرم‌ها</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+      <button class="tab active" data-tab="upload">📄 رزومه</button>
+      <button class="tab" data-tab="profile">👤 پروفایل</button>
+      <button class="tab" data-tab="settings">⚙️ تنظیمات</button>
+    </div>
+
+    <!-- Upload Tab -->
+    <div class="tab-content active" id="upload">
+      <div class="upload-area" id="dropZone">
+        <div class="upload-icon">📎</div>
+        <p>فایل رزومه رو اینجا بکشید</p>
+        <p class="small">PDF, DOCX, TXT, JPG, PNG</p>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" hidden>
+        <button class="btn btn-primary" id="selectFile">انتخاب فایل</button>
+      </div>
+
+      <div class="uploaded-file" id="uploadedFile" style="display:none">
+        <div class="file-info">
+          <span class="file-icon">✅</span>
+          <span class="file-name" id="fileName"></span>
+        </div>
+        <button class="btn btn-danger btn-sm" id="removeFile">حذف</button>
+      </div>
+
+      <div class="extracted-data" id="extractedData" style="display:none">
+        <h3>📊 اطلاعات استخراج شده:</h3>
+        <div id="dataPreview"></div>
+        <button class="btn btn-success" id="saveData">💾 ذخیره اطلاعات</button>
+      </div>
+    </div>
+
+    <!-- Profile Tab -->
+    <div class="tab-content" id="profile">
+      <div class="form-group">
+        <label>نام کامل</label>
+        <input type="text" id="fullName" placeholder="علی کاظمی">
+      </div>
+      <div class="form-group">
+        <label>ایمیل</label>
+        <input type="email" id="email" placeholder="ali@example.com">
+      </div>
+      <div class="form-group">
+        <label>تلفن</label>
+        <input type="tel" id="phone" placeholder="+49 170 1234567">
+      </div>
+      <div class="form-group">
+        <label>آدرس</label>
+        <input type="text" id="address" placeholder="Berlin, Germany">
+      </div>
+      <div class="form-group">
+        <label>لینکدین</label>
+        <input type="url" id="linkedin" placeholder="https://linkedin.com/in/...">
+      </div>
+      <div class="form-group">
+        <label>گیت‌هاب</label>
+        <input type="url" id="github" placeholder="https://github.com/...">
+      </div>
+      <div class="form-group">
+        <label>وب‌سایت</label>
+        <input type="url" id="website" placeholder="https://...">
+      </div>
+      <div class="form-group">
+        <label>درباره من</label>
+        <textarea id="summary" rows="3" placeholder="خلاصه رزومه..."></textarea>
+      </div>
+      <button class="btn btn-primary" id="saveProfile">💾 ذخیره پروفایل</button>
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="settings">
+      <div class="form-group">
+        <label>API Key (اختیاری - برای هوش مصنوعی)</label>
+        <input type="password" id="apiKey" placeholder="OpenAI / Anthropic API Key">
+      </div>
+      <div class="toggle-group">
+        <label>پر کردن خودکار فعال باشه</label>
+        <input type="checkbox" id="autoFillEnabled" checked>
+      </div>
+      <div class="toggle-group">
+        <label>فقط سایت‌های کاریابی</label>
+        <input type="checkbox" id="jobSitesOnly">
+      </div>
+      <div class="form-group">
+        <label>سایت‌های مجاز (با کاما جدا کنید)</label>
+        <textarea id="allowedSites" rows="2" placeholder="linkedin.com, stepstone.de, indeed.de"></textarea>
+      </div>
+      <button class="btn btn-primary" id="saveSettings">💾 ذخیره تنظیمات</button>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="statusBar">
+      <span id="statusText">آماده</span>
+    </div>
+
+    <!-- Fill Button -->
+    <button class="btn btn-fill" id="fillBtn" style="display:none">
+      🚀 پر کردن فرم
+    </button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
