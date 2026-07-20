@@ -1,4 +1,4 @@
-// AutoFill Pro - Popup Script
+// AutoFill Pro - Popup Script v1.1 (with PDF.js)
 document.addEventListener('DOMContentLoaded', () => {
   // Elements
   const tabs = document.querySelectorAll('.tab');
@@ -91,7 +91,7 @@ document.addEventListener('DOMContentLoaded', () => {
       fillBtn.style.display = 'block';
 
     } catch (error) {
-      showStatus('❌ خطا در پردازش فایل', 'error');
+      showStatus('❌ خطا در پردازش فایل: ' + error.message, 'error');
       console.error(error);
     }
   }
@@ -119,51 +119,114 @@ document.addEventListener('DOMContentLoaded', () => {
     return await file.text();
   }
 
-  // PDF extraction (basic)
+  // PDF extraction using pdf.js
   async function extractPDF(file) {
-    // For PDF, we'll use a simple approach
-    // In production, use pdf.js library
+    // Load pdf.js dynamically
+    const pdfjsLib = await loadPDFJS();
+
     const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
-    // Simple text extraction from PDF
-    let text = '';
-    for (let i = 0; i < uint8Array.length; i++) {
-      if (uint8Array[i] >= 32 && uint8Array[i] <= 126) {
-        text += String.fromCharCode(uint8Array[i]);
-      }
+    let fullText = '';
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+
+      const pageText = textContent.items.map(item => item.str).join(' ');
+      fullText += pageText + '\n\n';
     }
 
-    // Extract readable text between BT and ET markers
-    const matches = text.match(/BT[\s\S]*?ET/g);
-    if (matches) {
-      return matches.map(m => {
-        const textMatch = m.match(/\(([^)]+)\)/g);
-        return textMatch ? textMatch.map(t => t.slice(1, -1)).join(' ') : '';
-      }).join('\n');
-    }
-
-    return text;
+    return fullText.trim();
   }
 
-  // DOCX extraction (basic)
+  // Load pdf.js library dynamically
+  async function loadPDFJS() {
+    // Check if already loaded
+    if (window.pdfjsLib) return window.pdfjsLib;
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = chrome.runtime.getURL('lib/pdf.min.mjs');
+      script.type = 'module';
+
+      script.onload = async () => {
+        // Import as module
+        const pdfjsModule = await import(chrome.runtime.getURL('lib/pdf.min.mjs'));
+        window.pdfjsLib = pdfjsModule;
+
+        // Set worker
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+          chrome.runtime.getURL('lib/pdf.worker.min.mjs');
+
+        resolve(window.pdfjsLib);
+      };
+
+      script.onerror = () => {
+        // Fallback: try to load from CDN
+        const fallback = document.createElement('script');
+        fallback.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs';
+        fallback.type = 'module';
+        fallback.onload = async () => {
+          const mod = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
+          window.pdfjsLib = mod;
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
+          resolve(window.pdfjsLib);
+        };
+        fallback.onerror = () => reject(new Error('Could not load PDF.js'));
+        document.head.appendChild(fallback);
+      };
+
+      document.head.appendChild(script);
+    });
+  }
+
+  // DOCX extraction
   async function extractDOCX(file) {
-    // DOCX is a ZIP file with XML inside
-    // For basic extraction, read as text
-    const text = await file.text();
-    // Extract text from XML tags
-    const matches = text.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
-    if (matches) {
-      return matches.map(m => m.replace(/<[^>]+>/g, '')).join(' ');
+    try {
+      // Load JSZip for DOCX parsing
+      const JSZip = await loadJSZip();
+      const zip = await JSZip.loadAsync(file);
+
+      // Read document.xml
+      const docXml = await zip.file('word/document.xml').async('text');
+
+      // Extract text from XML tags
+      const matches = docXml.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
+      if (matches) {
+        return matches.map(m => m.replace(/<[^>]+>/g, '')).join(' ');
+      }
+
+      return docXml;
+    } catch (error) {
+      console.warn('DOCX parsing failed, trying raw text:', error);
+      return await file.text();
     }
-    return text;
   }
 
-  // Image OCR (basic - needs API for production)
+  // Load JSZip dynamically
+  async function loadJSZip() {
+    if (window.JSZip) return window.JSZip;
+
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      script.onload = () => resolve(window.JSZip);
+      script.onerror = () => reject(new Error('Could not load JSZip'));
+      document.head.appendChild(script);
+    });
+  }
+
+  // Image OCR (placeholder - needs API for production)
   async function extractImage(file) {
-    // Basic: just return filename as hint
-    // For production: use Tesseract.js or cloud OCR API
-    return `[Image: ${file.name}] - نیاز به OCR API دارد`;
+    // For production, integrate with:
+    // - Tesseract.js (client-side OCR)
+    // - Google Cloud Vision API
+    // - AWS Textract
+    // - OpenAI GPT-4 Vision
+
+    return `[Image: ${file.name}] - نیاز به OCR API دارد. لطفاً متن رزومه را به صورت PDF یا متن آپلود کنید.`;
   }
 
   // Parse resume text into structured data
@@ -179,8 +242,13 @@ document.addEventListener('DOMContentLoaded', () => {
       summary: '',
       skills: '',
       experience: '',
-      education: ''
+      education: '',
+      dateOfBirth: '',
+      nationality: '',
+      visaStatus: ''
     };
+
+    if (!text) return data;
 
     // Email
     const emailMatch = text.match(/[\w.-]+@[\w.-]+\.\w+/);
@@ -198,10 +266,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const githubMatch = text.match(/github\.com\/[\w-]+/i);
     if (githubMatch) data.github = 'https://' + githubMatch[0];
 
-    // Website
-    const websiteMatch = text.match(/(?:https?:\/\/)?(?:www\.)?[\w-]+\.\w+/g);
-    if (websiteMatch) {
-      const site = websiteMatch.find(s => !s.includes('linkedin') && !s.includes('github'));
+    // Website (generic)
+    const websiteMatches = text.match(/(?:https?:\/\/)?(?:www\.)?[\w-]+\.\w+/g);
+    if (websiteMatches) {
+      const site = websiteMatches.find(s =>
+        !s.includes('linkedin') && !s.includes('github') && !s.includes('email')
+      );
       if (site) data.website = site.startsWith('http') ? site : 'https://' + site;
     }
 
@@ -209,7 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const lines = text.split('\n').filter(l => l.trim());
     for (const line of lines) {
       const trimmed = line.trim();
-      // Name is usually 2-4 words, no special chars
+      // English name: 2-4 words, letters only
       if (/^[A-Za-zÀ-ÿ\s]{2,40}$/.test(trimmed) && !trimmed.includes('@')) {
         data.fullName = trimmed;
         break;
@@ -221,18 +291,34 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    // Skills (look for skills section)
-    const skillsSection = text.match(/(?:skills?|مهارت)[\s\S]*?(?:\n\n|\n(?=[A-Z]))/i);
+    // Skills
+    const skillsSection = text.match(/(?:skills?|مهارت|fähigkeiten)[\s:]*([\s\S]*?)(?:\n\n|\n(?=[A-Z\u0600-\u06FF]{2}))/i);
     if (skillsSection) {
-      data.skills = skillsSection[0].replace(/skills?:?\s*/i, '').trim();
+      data.skills = skillsSection[1].trim();
     }
 
-    // Summary (first paragraph)
-    if (lines.length > 0) {
+    // Summary / About
+    const summarySection = text.match(/(?:about|summary|profile|درباره|uber mich)[\s:]*([\s\S]*?)(?:\n\n|\n(?=[A-Z\u0600-\u06FF]{2}))/i);
+    if (summarySection) {
+      data.summary = summarySection[1].trim();
+    } else if (lines.length > 0) {
+      // Use first paragraph as summary
       const firstPara = lines.slice(0, 3).join(' ');
-      if (firstPara.length > 20) {
+      if (firstPara.length > 20 && firstPara.length < 500) {
         data.summary = firstPara;
       }
+    }
+
+    // Experience
+    const expSection = text.match(/(?:experience|work|تجربه|سابقه|berufserfahrung)[\s:]*([\s\S]*?)(?=\n(?:education|skills|projects|تحصیلات))/i);
+    if (expSection) {
+      data.experience = expSection[1].trim();
+    }
+
+    // Education
+    const eduSection = text.match(/(?:education|degree|university|تحصیلات|bildung)[\s:]*([\s\S]*?)(?=\n(?:experience|skills|projects|تجربه))/i);
+    if (eduSection) {
+      data.education = eduSection[1].trim();
     }
 
     return data;
@@ -251,7 +337,10 @@ document.addEventListener('DOMContentLoaded', () => {
       summary: 'خلاصه',
       skills: 'مهارت‌ها',
       experience: 'تجربه',
-      education: 'تحصیلات'
+      education: 'تحصیلات',
+      dateOfBirth: 'تاریخ تولد',
+      nationality: 'ملیت',
+      visaStatus: 'وضعیت ویزا'
     };
     return labels[key] || key;
   }
@@ -271,7 +360,6 @@ document.addEventListener('DOMContentLoaded', () => {
   saveData.addEventListener('click', () => {
     chrome.storage.local.get('resumeData', (result) => {
       if (result.resumeData) {
-        // Also save to profile fields
         const fields = ['fullName', 'email', 'phone', 'address', 'linkedin', 'github', 'website', 'summary'];
         fields.forEach(field => {
           const el = document.getElementById(field);
