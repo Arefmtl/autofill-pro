@@ -12,12 +12,13 @@
     <div class="header">
       <div class="logo">⚡</div>
       <h1>AutoFill Pro</h1>
-      <p class="subtitle">پر کردن خودکار فرم‌ها</p>
+      <p class="subtitle">پر کردن خودکار فرم‌ها + تبدیل فایل</p>
     </div>
 
     <!-- Tab Navigation -->
     <div class="tabs">
       <button class="tab active" data-tab="upload">📄 رزومه</button>
+      <button class="tab" data-tab="convert">🔄 تبدیل</button>
       <button class="tab" data-tab="profile">👤 پروفایل</button>
       <button class="tab" data-tab="settings">⚙️ تنظیمات</button>
     </div>
@@ -44,6 +45,84 @@
         <h3>📊 اطلاعات استخراج شده:</h3>
         <div id="dataPreview"></div>
         <button class="btn btn-success" id="saveData">💾 ذخیره اطلاعات</button>
+      </div>
+    </div>
+
+    <!-- Convert Tab -->
+    <div class="tab-content" id="convert">
+      <div class="convert-section">
+        <h3>🔄 تبدیل فایل</h3>
+        <p class="small">هر فایلی رو به هر فرمتی تبدیل کن</p>
+
+        <!-- Source Format -->
+        <div class="form-group">
+          <label>فرمت ورودی</label>
+          <select id="sourceFormat">
+            <option value="auto">تشخیص خودکار</option>
+            <option value="pdf">PDF</option>
+            <option value="docx">DOCX (Word)</option>
+            <option value="txt">TXT (متن ساده)</option>
+            <option value="jpg">JPG (عکس)</option>
+            <option value="png">PNG (عکس)</option>
+          </select>
+        </div>
+
+        <!-- Target Format -->
+        <div class="form-group">
+          <label>فرمت خروجی</label>
+          <select id="targetFormat">
+            <option value="txt">TXT (متن ساده)</option>
+            <option value="json">JSON (ساختاریافته)</option>
+            <option value="csv">CSV (جدولی)</option>
+            <option value="html">HTML (صفحه وب)</option>
+            <option value="md">Markdown</option>
+            <option value="pdf">PDF</option>
+          </select>
+        </div>
+
+        <!-- Upload for conversion -->
+        <div class="convert-upload" id="convertDropZone">
+          <div class="upload-icon">📁</div>
+          <p>فایل رو اینجا بکشید یا کلیک کنید</p>
+          <input type="file" id="convertFileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" hidden>
+        </div>
+
+        <!-- Source file info -->
+        <div class="convert-file-info" id="convertFileInfo" style="display:none">
+          <span class="file-icon">📄</span>
+          <span id="convertFileName"></span>
+          <span class="file-size" id="convertFileSize"></span>
+        </div>
+
+        <!-- Convert button -->
+        <button class="btn btn-fill" id="convertBtn" style="display:none">
+          🔄 تبدیل کن
+        </button>
+
+        <!-- Result -->
+        <div class="convert-result" id="convertResult" style="display:none">
+          <h3>✅ نتیجه تبدیل:</h3>
+          <div class="result-preview" id="resultPreview"></div>
+          <div class="result-actions">
+            <button class="btn btn-success" id="downloadResult">📥 دانلود</button>
+            <button class="btn btn-primary" id="copyResult">📋 کپی</button>
+          </div>
+        </div>
+
+        <!-- Batch convert -->
+        <div class="batch-section">
+          <h4>📦 تبدیل دسته‌ای</h4>
+          <p class="small">چند فایل همزمان تبدیل کن</p>
+          <div class="batch-upload" id="batchDropZone">
+            <div class="upload-icon">📂</div>
+            <p>چند فایل رو اینجا بکشید</p>
+            <input type="file" id="batchFileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" multiple hidden>
+          </div>
+          <div id="batchFiles" style="display:none"></div>
+          <button class="btn btn-primary" id="batchConvertBtn" style="display:none">
+            🔄 تبدیل همه
+          </button>
+        </div>
       </div>
     </div>
 
@@ -87,7 +166,7 @@
     <!-- Settings Tab -->
     <div class="tab-content" id="settings">
       <div class="form-group">
-        <label>API Key (اختیاری - برای هوش مصنوعی)</label>
+        <label>API Key (اختیاری - برای OCR و AI)</label>
         <input type="password" id="apiKey" placeholder="OpenAI / Anthropic API Key">
       </div>
       <div class="toggle-group">
