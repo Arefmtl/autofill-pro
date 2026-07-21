@@ -509,6 +509,40 @@ document.addEventListener('DOMContentLoaded', () => {
     showStatus(`✅ ${ok}/${batchFileList.length} تبدیل شد`, 'success');
   });
 
+  // ==================== CHECK UPDATES ====================
+  const checkUpdatesBtn = document.getElementById('checkUpdates');
+  const updateStatus = document.getElementById('updateStatus');
+
+  if (checkUpdatesBtn) {
+    checkUpdatesBtn.addEventListener('click', async () => {
+      updateStatus.textContent = '⏳ در حال بررسی...';
+      try {
+        const resp = await fetch('https://api.github.com/repos/Arefmtl/autofill-pro/releases/latest');
+        const data = await resp.json();
+        const latest = data.tag_name || 'v1.6';
+        const current = chrome.runtime.getManifest().version;
+        const latestNum = parseFloat(latest.replace('v', ''));
+        const currentNum = parseFloat(current);
+
+        if (latestNum > currentNum) {
+          updateStatus.innerHTML = '';
+          const link = document.createElement('a');
+          link.href = data.html_url;
+          link.target = '_blank';
+          link.textContent = `📥 آپدیت جدید موجود: ${latest}`;
+          link.style.cssText = 'color:#00d4ff;text-decoration:underline;cursor:pointer';
+          updateStatus.appendChild(link);
+        } else {
+          updateStatus.textContent = '✅ شما آخرین نسخه رو دارید (v' + current + ')';
+          updateStatus.style.color = '#00ff88';
+        }
+      } catch (e) {
+        updateStatus.textContent = '❌ خطا در بررسی آپدیت';
+        updateStatus.style.color = '#ff4444';
+      }
+    });
+  }
+
   // ==================== LOAD SAVED ====================
   chrome.storage.local.get(['profile', 'settings', 'resumeData'], async (result) => {
     if (result.profile) {
