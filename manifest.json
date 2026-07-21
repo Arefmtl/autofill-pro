@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AutoFill Pro - CV Auto Form Filler",
-  "version": "1.4.0",
-  "description": "Smart Chrome extension that auto-fills job application forms from client resumes (with AI enhancement)",
+  "version": "1.5.0",
+  "description": "Smart Chrome extension that auto-fills job application forms from client resumes (AI-powered)",
   "permissions": [
     "activeTab",
     "storage",
@@ -29,7 +29,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["lib/*", "background/ai.js"],
+      "resources": ["lib/*", "background/ai.js", "logo.png"],
       "matches": ["<all_urls>"]
     }
   ],
