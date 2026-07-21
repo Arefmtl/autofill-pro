@@ -1,17 +1,27 @@
-// AutoFill Pro v1.4 - AI Enhanced Parser
+// AutoFill Pro v1.6 - AI Module (Security Hardened)
 (() => {
   'use strict';
 
   // ==================== CONFIG ====================
   const AI_CONFIG = {
-    provider: 'openai', // 'openai' or 'anthropic'
-    model: 'gpt-4o-mini',
-    endpoint: 'https://api.openai.com/v1/chat/completions',
+    endpoint: 'https://api.opencode.ai/v1/chat/completions',
+    model: 'mimo-2.5'
   };
+
+  // ==================== RATE LIMITING ====================
+  let lastCall = 0;
+  const COOLDOWN = 5000; // 5 seconds between AI calls
+  function rateLimit() {
+    const now = Date.now();
+    if (now - lastCall < COOLDOWN) return false;
+    lastCall = now;
+    return true;
+  }
 
   // ==================== AI PARSER ====================
   async function parseWithAI(text, apiKey) {
     if (!apiKey) return null;
+    if (!rateLimit()) return null;
 
     const prompt = `Extract structured data from this resume/CV text. Return ONLY a JSON object with these fields (empty string if not found):
 
@@ -54,28 +64,19 @@ Return ONLY the JSON object, no explanation.`;
         })
       });
 
-      if (!response.ok) {
-        console.error('AI API error:', response.status);
-        return null;
-      }
-
+      if (!response.ok) return null;
       const data = await response.json();
       const content = data.choices[0]?.message?.content || '';
-
-      // Extract JSON from response
       const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-    } catch (err) {
-      console.error('AI parsing failed:', err);
-    }
+      if (jsonMatch) return JSON.parse(jsonMatch[0]);
+    } catch (err) { /* silent */ }
     return null;
   }
 
   // ==================== AI FORM FILLER ====================
   async function matchFieldsWithAI(formHTML, profileData, apiKey) {
     if (!apiKey) return null;
+    if (!rateLimit()) return null;
 
     const prompt = `You are a form-filling assistant. Given a web form's HTML structure and a user's profile data, determine which profile field maps to which form input.
 
@@ -108,20 +109,18 @@ Only include fields that have a clear match. Return ONLY the JSON object.`;
       });
 
       if (!response.ok) return null;
-
       const data = await response.json();
       const content = data.choices[0]?.message?.content || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]);
-    } catch (err) {
-      console.error('AI form matching failed:', err);
-    }
+    } catch (err) { /* silent */ }
     return null;
   }
 
   // ==================== AI COVER LETTER ====================
   async function generateCoverLetter(profileData, jobDescription, apiKey) {
     if (!apiKey) return null;
+    if (!rateLimit()) return null;
 
     const prompt = `Write a professional cover letter in the same language as the job description.
 
@@ -151,19 +150,14 @@ Write a concise, professional cover letter (3-4 paragraphs). Be specific about m
       if (!response.ok) return null;
       const data = await response.json();
       return data.choices[0]?.message?.content || null;
-    } catch (err) {
-      console.error('AI cover letter failed:', err);
-    }
+    } catch (err) { /* silent */ }
     return null;
   }
 
-  // Export for use in popup
+  // Export
   window.AutoFillAI = {
     parseWithAI,
     matchFieldsWithAI,
-    generateCoverLetter,
-    AI_CONFIG
+    generateCoverLetter
   };
-
-  console.log('AutoFill Pro v1.4: AI module loaded ✅');
 })();

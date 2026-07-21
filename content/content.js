@@ -1,5 +1,4 @@
-// AutoFill Pro v1.5 - Complete Rewrite
-// Fixed parser + Working AI + Professional Logo
+// AutoFill Pro v1.6 - Security Hardened
 (() => {
   'use strict';
 
@@ -9,32 +8,35 @@
 
   // ==================== FIELD MAP (Multi-language) ====================
   const FIELD_MAP = {
-    // Name
     'نام': 'fullName', 'نام کامل': 'fullName', 'full name': 'fullName',
     'fullname': 'fullName', 'first name': 'firstName', 'last name': 'lastName',
     'vorname': 'firstName', 'nachname': 'lastName', 'name': 'fullName',
-    // Email
     'ایمیل': 'email', 'email': 'email', 'e-mail': 'email', 'mail': 'email',
-    // Phone
     'تلفن': 'phone', 'شماره تلفن': 'phone', 'phone': 'phone', 'tel': 'phone',
     'telephone': 'phone', 'mobile': 'phone', 'handy': 'phone', 'telefon': 'phone',
-    // Address
     'آدرس': 'address', 'address': 'address', 'adresse': 'address',
     'stadt': 'city', 'city': 'city', 'land': 'country', 'country': 'country',
-    // Social
     'لینکدین': 'linkedin', 'linkedin': 'linkedin',
     'گیت‌هاب': 'github', 'github': 'github',
     'وب‌سایت': 'website', 'website': 'website', 'webseite': 'website', 'homepage': 'website',
-    // Sections
     'درباره من': 'summary', 'summary': 'summary', 'about': 'summary', 'über mich': 'summary',
     'مهارت‌ها': 'skills', 'skills': 'skills', 'fähigkeiten': 'skills',
     'تجربه': 'experience', 'experience': 'experience', 'berufserfahrung': 'experience',
     'تحصیلات': 'education', 'education': 'education', 'bildung': 'education',
-    // Extra
     'تاریخ تولد': 'dateOfBirth', 'date of birth': 'dateOfBirth', 'dob': 'dateOfBirth',
     'ملیت': 'nationality', 'nationality': 'nationality',
     'ویزا': 'visaStatus', 'work permit': 'visaStatus', 'visa status': 'visaStatus',
   };
+
+  // ==================== RATE LIMITING ====================
+  let lastAICall = 0;
+  const AI_COOLDOWN = 5000;
+  function canCallAI() {
+    const now = Date.now();
+    if (now - lastAICall < AI_COOLDOWN) return false;
+    lastAICall = now;
+    return true;
+  }
 
   // ==================== STORAGE ====================
   async function getProfile() {
@@ -46,6 +48,11 @@
   }
 
   async function getApiKey() {
+    // Try SecureStorage first, then fallback
+    if (window.SecureStorage) {
+      const key = await window.SecureStorage.get('apiKey');
+      if (key) return key;
+    }
     return new Promise(resolve => {
       chrome.storage.local.get('settings', r => {
         resolve(r.settings?.apiKey || '');
@@ -59,7 +66,6 @@
     if (ext === 'txt') return await file.text();
     if (ext === 'pdf') return await extractPDF(file);
     if (ext === 'docx') return await extractDOCX(file);
-    if (['jpg', 'jpeg', 'png'].includes(ext)) return `[Image: ${file.name}]`;
     return await file.text();
   }
 
@@ -76,8 +82,16 @@
       }
       return text.trim();
     } catch (e) {
-      console.error('PDF error:', e);
-      return await file.text();
+      // Fallback: raw text extraction from buffer
+      try {
+        const buf = await file.arrayBuffer();
+        const u8 = new Uint8Array(buf);
+        let t = '';
+        for (let i = 0; i < u8.length; i++) {
+          if (u8[i] >= 32 && u8[i] <= 126) t += String.fromCharCode(u8[i]);
+        }
+        return t;
+      } catch { return ''; }
     }
   }
 
@@ -95,7 +109,7 @@
           resolve(window.pdfjsLib);
         } catch (e) { reject(e); }
       };
-      s.onerror = () => reject(new Error('PDF.js failed'));
+      s.onerror = () => reject(new Error('PDF.js load failed'));
       document.head.appendChild(s);
     });
   }
@@ -113,9 +127,9 @@
     if (window.JSZip) return window.JSZip;
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.src = chrome.runtime.getURL('lib/jszip.min.js');
       s.onload = () => resolve(window.JSZip);
-      s.onerror = () => reject(new Error('JSZip failed'));
+      s.onerror = () => reject(new Error('JSZip load failed'));
       document.head.appendChild(s);
     });
   }
@@ -128,140 +142,116 @@
       skills: '', experience: '', education: '',
       dateOfBirth: '', nationality: '', visaStatus: ''
     };
-
     if (!text || text.length < 10) return data;
 
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-    // Email
     const em = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
     if (em) data.email = em[0];
 
-    // Phone
-    const ph = text.match(/[\+]\d{1,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{0,4}/);
-    if (ph) data.phone = ph[0].trim();
+    const phonePatterns = [
+      /[\+]\d{1,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{0,4}/,
+      /0\d{2,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}/,
+      /\(\d{3,4}\)[\s\-]?\d{3,4}[\s\-]?\d{3,4}/
+    ];
+    for (const pat of phonePatterns) {
+      const m = text.match(pat);
+      if (m && m[0].replace(/\D/g, '').length >= 8) { data.phone = m[0].trim(); break; }
+    }
 
-    // LinkedIn
     const li = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w\-]+\/?/i);
     if (li) data.linkedin = li[0].startsWith('http') ? li[0] : 'https://' + li[0];
 
-    // GitHub
     const gh = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-]+\/?/i);
     if (gh) data.github = gh[0].startsWith('http') ? gh[0] : 'https://' + gh[0];
 
-    // Name (first 2-5 word line that isn't email/url/number)
-    const skip = ['experience', 'education', 'skills', 'summary', 'about', 'contact',
+    const wm = text.match(/(?:https?:\/\/)?(?:www\.)?[\w\-]+\.\w{2,}(?:\/\S*)?/g);
+    if (wm) {
+      const site = wm.find(s => !s.includes('linkedin') && !s.includes('github') && !s.includes('@'));
+      if (site) data.website = site.startsWith('http') ? site : 'https://' + site;
+    }
+
+    const skipHeaders = ['experience', 'education', 'skills', 'summary', 'about', 'contact',
       'profile', 'work', 'projects', 'تجربه', 'تحصیلات', 'مهارت', 'درباره', 'تماس'];
     for (const line of lines) {
       const lower = line.toLowerCase();
-      if (skip.some(h => lower.includes(h))) continue;
+      if (skipHeaders.some(h => lower.includes(h))) continue;
       if (lower.includes('@') || lower.includes('http') || lower.includes('www')) continue;
       if (line.length < 2 || line.length > 60 || /\d{3,}/.test(line)) continue;
       const words = line.split(/\s+/);
       if (words.length >= 2 && words.length <= 5) {
-        if (/^[A-Za-zÀ-ÿÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßŒœĄąĆćĘęŁłŃńŚśŹźŻż\s\-\.]+$/.test(line) ||
-            /^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\s]+$/.test(line)) {
-          data.fullName = line;
-          break;
+        if (/^[A-Za-zÀ-ÿ\s\-\.]+$/.test(line) || /^[\u0600-\u06FF\s]+$/.test(line)) {
+          data.fullName = line; break;
         }
       }
     }
 
-    // Sections
     const full = lines.join('\n');
     const sec = (pattern) => {
       const m = full.match(pattern);
-      return m ? m[1].replace(/\n{3,}/g, '\n\n').trim().substring(0, 1000) : '';
+      return m ? m[1].replace(/\n{3,}/g, '\n\n').replace(/^\s*[\-\*•]\s*/gm, '').trim().substring(0, 1000) : '';
     };
+    data.skills = sec(/(?:skills?|مهارت|capabilities|technologies|fähigkeiten)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|work|education|projects|summary|about|contact|تجربه|تحصیلات|پروژه|درباره)|\n\n\n|$)/i);
+    data.experience = sec(/(?:experience|work history|سابقه کاری|تجربه کاری|berufserfahrung)[:\s]*\n?([\s\S]*?)(?=\n(?:education|skills|projects|summary|about|contact|certifications|تحصیلات|مهارت|پروژه|درباره)|\n\n\n|$)/i);
+    data.education = sec(/(?:education|degree|تحصیلات|bildung|ausbildung|studium)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|skills|projects|summary|about|contact|certifications|تجربه|مهارت|پروژه|درباره)|\n\n\n|$)/i);
+    data.summary = sec(/(?:about me|summary|profile|objective|درباره من|über mich|profil)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|education|skills|work|contact|تجربه|تحصیلات|مهارت|تماس)|\n\n\n|$)/i);
 
-    data.skills = sec(/(?:skills?|مهارت|capabilities|technologies)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|work|education|projects|summary|تجربه|تحصیلات)|\n\n\n|\Z)/i);
-    data.experience = sec(/(?:experience|work history|سابقه کاری|تجربه کاری)[:\s]*\n?([\s\S]*?)(?=\n(?:education|skills|projects|تحصیلات|مهارت)|\n\n\n|\Z)/i);
-    data.education = sec(/(?:education|degree|تحصیلات|bildung)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|skills|تجربه|مهارت)|\n\n\n|\Z)/i);
-    data.summary = sec(/(?:about me|summary|profile|objective|درباره من|über mich)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|education|skills|تجربه|تحصیلات|مهارت)|\n\n\n|\Z)/i);
-
-    // Address
     const addr = full.match(/(?:address|location|stadt|ort|wohnort|آدرس)[:\s]*([^\n]+)/i);
     if (addr) data.address = addr[1].trim();
+    else {
+      const cities = ['Berlin', 'München', 'Hamburg', 'Frankfurt', 'Köln', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Dresden', 'Hannover', 'Wien', 'Zürich', 'Bern', 'Amsterdam', 'London', 'Paris', 'Tehran', 'Isfahan', 'Shiraz', 'Tabriz'];
+      for (const c of cities) {
+        if (full.match(new RegExp(c, 'i'))) { data.address = c; break; }
+      }
+    }
+
+    const dob = full.match(/(?:date of birth|dob|geburtstag|تاریخ تولد|تولد|born)[:\s]*(\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}|\d{4}[\/\.\-]\d{1,2}[\/\.\-]\d{1,2})/i);
+    if (dob) data.dateOfBirth = dob[1];
+
+    const nat = full.match(/(?:nationality|staatsangehörigkeit|ملیت)[:\s]*([^\n]+)/i);
+    if (nat) data.nationality = nat[1].trim();
+
+    const visa = full.match(/(?:visa|work permit|aufenthaltstitel|arbeitserlaubnis|ویزا|اقامت)[:\s]*([^\n]+)/i);
+    if (visa) data.visaStatus = visa[1].trim();
 
     return data;
   }
 
-  // ==================== AI PARSER (with API Key) ====================
+  // ==================== AI PARSER ====================
   async function parseWithAI(text, apiKey) {
-    if (!apiKey) return null;
+    if (!apiKey || !canCallAI()) return null;
 
     const prompt = `Extract structured data from this resume. Return ONLY a JSON object:
-{
-  "fullName": "string",
-  "email": "string",
-  "phone": "string (international format)",
-  "address": "string (city, country)",
-  "linkedin": "string (full URL or empty)",
-  "github": "string (full URL or empty)",
-  "website": "string (full URL or empty)",
-  "summary": "string (2-3 sentences)",
-  "skills": "string (comma-separated list)",
-  "experience": "string (most recent job: title @ company, 1 line)",
-  "education": "string (degree @ university, year)",
-  "dateOfBirth": "string or empty",
-  "nationality": "string or empty",
-  "visaStatus": "string or empty"
-}
+{"fullName":"","email":"","phone":"","address":"","linkedin":"","github":"","website":"","summary":"","skills":"","experience":"","education":"","dateOfBirth":"","nationality":"","visaStatus":""}
 
 Resume text:
 ---
 ${text.substring(0, 4000)}
 ---
 
-Return ONLY the JSON, no explanation, no markdown.`;
+Return ONLY the JSON.`;
 
     try {
       const response = await fetch(AI_ENDPOINT, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify({
-          model: AI_MODEL,
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-          max_tokens: 1000
-        })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+        body: JSON.stringify({ model: AI_MODEL, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: 1000 })
       });
-
-      if (!response.ok) {
-        console.error('AI API error:', response.status, await response.text());
-        return null;
-      }
-
+      if (!response.ok) return null;
       const data = await response.json();
       const content = data.choices[0]?.message?.content || '';
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) return JSON.parse(jsonMatch[0]);
-    } catch (err) {
-      console.error('AI parse failed:', err);
-    }
+    } catch (err) { /* silent */ }
     return null;
   }
 
-  // ==================== MAIN PARSE FUNCTION ====================
   async function parseResume(text) {
     const apiKey = await getApiKey();
-
-    // Try AI first if API key exists
     if (apiKey) {
-      console.log('🤖 Using AI parser...');
       const aiResult = await parseWithAI(text, apiKey);
-      if (aiResult && aiResult.fullName) {
-        console.log('✅ AI parser succeeded');
-        return aiResult;
-      }
-      console.log('⚠️ AI parser failed, falling back to regex');
+      if (aiResult && aiResult.fullName) return aiResult;
     }
-
-    // Fallback to regex
-    console.log('📝 Using regex parser');
     return parseWithRegex(text);
   }
 
@@ -270,18 +260,14 @@ Return ONLY the JSON, no explanation, no markdown.`;
     const label = getFieldLabel(field);
     if (!label) return null;
     const lower = label.toLowerCase().trim();
-
     for (const [pattern, key] of Object.entries(FIELD_MAP)) {
       if (lower.includes(pattern.toLowerCase())) return key;
     }
-
     const attrs = [field.name, field.id, field.placeholder, field.autocomplete]
       .map(a => (a || '').toLowerCase()).join(' ');
-
     for (const [pattern, key] of Object.entries(FIELD_MAP)) {
       if (attrs.includes(pattern.toLowerCase())) return key;
     }
-
     return null;
   }
 
@@ -302,8 +288,7 @@ Return ONLY the JSON, no explanation, no markdown.`;
     if (parent) {
       const texts = Array.from(parent.childNodes)
         .filter(n => n.nodeType === Node.TEXT_NODE)
-        .map(n => n.textContent.trim())
-        .filter(t => t.length > 0);
+        .map(n => n.textContent.trim()).filter(t => t.length > 0);
       if (texts.length > 0) return texts[0];
     }
     return field.placeholder || field.name || field.id || '';
@@ -312,32 +297,23 @@ Return ONLY the JSON, no explanation, no markdown.`;
   function fillField(field, value) {
     if (!field || !value || field.type === 'hidden') return false;
     if (field.value && field.value.trim() !== '') return false;
-
     field.focus();
     field.dispatchEvent(new Event('focus', { bubbles: true }));
-
     const setter = Object.getOwnPropertyDescriptor(
-      field.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype,
-      'value'
+      field.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value'
     )?.set;
-
-    if (setter) setter.call(field, value);
-    else field.value = value;
-
+    if (setter) setter.call(field, value); else field.value = value;
     field.dispatchEvent(new Event('input', { bubbles: true }));
     field.dispatchEvent(new Event('change', { bubbles: true }));
     field.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
-
     return true;
   }
 
   async function fillForms() {
     const data = await getProfile();
     if (!data || Object.keys(data).length === 0) {
-      showNotification('❌ رزومه‌ای ذخیره نشده!', 'error');
-      return;
+      showNotification('❌ رزومه‌ای ذخیره نشده!', 'error'); return;
     }
-
     let filled = 0, total = 0;
     document.querySelectorAll('input, textarea, select').forEach(field => {
       const t = field.type?.toLowerCase();
@@ -350,15 +326,14 @@ Return ONLY the JSON, no explanation, no markdown.`;
         setTimeout(() => field.style.outline = '', 2000);
       }
     });
-
-    showNotification(filled > 0 ? `✅ ${filled}/${total} فیلد پر شد` : '⚠️ فیلدی مطابقت نداشت',
+    showNotification(filled > 0 ? `${filled}/${total} فیلد پر شد` : '⚠️ فیلدی مطابقت نداشت',
       filled > 0 ? 'success' : 'warning');
   }
 
   function showNotification(text, type) {
     const colors = { success: '#00ff88', error: '#ff4444', warning: '#ffaa00' };
     const el = document.createElement('div');
-    el.style.cssText = `position:fixed;top:20px;right:20px;background:#1a1a2e;color:${colors[type]||'#fff'};padding:16px 24px;border-radius:12px;border:1px solid ${colors[type]||'#333'};box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999999;font-size:14px;direction:rtl`;
+    el.style.cssText = `position:fixed;top:20px;right:20px;background:#1a1a2e;color:${colors[type] || '#fff'};padding:16px 24px;border-radius:12px;border:1px solid ${colors[type] || '#333'};box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999999;font-size:14px;direction:rtl`;
     el.textContent = text;
     document.body.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3000);
@@ -371,6 +346,4 @@ Return ONLY the JSON, no explanation, no markdown.`;
       sendResponse({ formCount: document.querySelectorAll('form').length, url: window.location.href });
     }
   });
-
-  console.log('AutoFill Pro v1.5: Content script loaded ✅');
 })();

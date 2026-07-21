@@ -1,4 +1,4 @@
-// AutoFill Pro v1.3 - Popup with Fixed Parser
+// AutoFill Pro v1.6 - Security Hardened
 document.addEventListener('DOMContentLoaded', () => {
   const tabs = document.querySelectorAll('.tab');
   const tabContents = document.querySelectorAll('.tab-content');
@@ -15,7 +15,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusBar = document.getElementById('statusBar');
   const statusText = document.getElementById('statusText');
 
-  // Convert elements
   const convertDropZone = document.getElementById('convertDropZone');
   const convertFileInput = document.getElementById('convertFileInput');
   const convertFileInfo = document.getElementById('convertFileInfo');
@@ -37,6 +36,24 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentConvertFile = null;
   let currentConvertResult = '';
   let batchFileList = [];
+
+  // ==================== SANITIZE ====================
+  function sanitize(str) {
+    if (!str) return '';
+    return String(str).replace(/[<>&"']/g, c => ({
+      '<': '<', '>': '>', '&': '&', '"': '"', "'": '&#39;'
+    }[c]));
+  }
+
+  // ==================== RATE LIMITING ====================
+  let lastAICall = 0;
+  const AI_COOLDOWN = 5000; // 5 seconds between AI calls
+  function canCallAI() {
+    const now = Date.now();
+    if (now - lastAICall < AI_COOLDOWN) return false;
+    lastAICall = now;
+    return true;
+  }
 
   // ==================== TABS ====================
   tabs.forEach(tab => {
@@ -64,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (ext === 'txt') return await file.text();
     if (ext === 'pdf') return await extractPDF(file);
     if (ext === 'docx') return await extractDOCX(file);
-    if (['jpg', 'jpeg', 'png'].includes(ext)) return `[Image: ${file.name}] - OCR not available. Please use PDF or text.`;
+    if (['jpg', 'jpeg', 'png'].includes(ext)) return `[Image: ${sanitize(file.name)}] - OCR not available.`;
     return await file.text();
   }
 
@@ -81,8 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return fullText.trim();
     } catch (err) {
-      console.error('PDF extraction failed:', err);
-      // Fallback: try raw text extraction
       const buffer = await file.arrayBuffer();
       const uint8 = new Uint8Array(buffer);
       let text = '';
@@ -107,22 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
           resolve(window.pdfjsLib);
         } catch (e) { reject(e); }
       };
-      script.onerror = () => {
-        // CDN fallback
-        const s2 = document.createElement('script');
-        s2.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs';
-        s2.type = 'module';
-        s2.onload = async () => {
-          try {
-            const mod = await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.min.mjs');
-            window.pdfjsLib = mod;
-            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.379/pdf.worker.min.mjs';
-            resolve(window.pdfjsLib);
-          } catch (e) { reject(e); }
-        };
-        s2.onerror = () => reject(new Error('PDF.js load failed'));
-        document.head.appendChild(s2);
-      };
+      script.onerror = () => reject(new Error('PDF.js load failed'));
       document.head.appendChild(script);
     });
   }
@@ -142,14 +142,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (window.JSZip) return window.JSZip;
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.src = chrome.runtime.getURL('lib/jszip.min.js');
       s.onload = () => resolve(window.JSZip);
       s.onerror = () => reject(new Error('JSZip load failed'));
       document.head.appendChild(s);
     });
   }
 
-  // ==================== RESUME PARSER (IMPROVED) ====================
+  // ==================== RESUME PARSER ====================
   function parseResume(text) {
     const data = {
       fullName: '', email: '', phone: '', address: '',
@@ -162,12 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-    // === EMAIL ===
+    // Email
     const emailMatch = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
     if (emailMatch) data.email = emailMatch[0];
 
-    // === PHONE ===
-    // Match international formats: +49 170 1234567, +98 912 3456789, 0170 1234567
+    // Phone
     const phonePatterns = [
       /[\+]\d{1,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{0,4}/,
       /0\d{2,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}/,
@@ -175,98 +174,62 @@ document.addEventListener('DOMContentLoaded', () => {
     ];
     for (const pat of phonePatterns) {
       const m = text.match(pat);
-      if (m && m[0].replace(/\D/g, '').length >= 8) {
-        data.phone = m[0].trim();
-        break;
-      }
+      if (m && m[0].replace(/\D/g, '').length >= 8) { data.phone = m[0].trim(); break; }
     }
 
-    // === LINKEDIN ===
+    // LinkedIn
     const linkedinMatch = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w\-]+\/?/i);
     if (linkedinMatch) data.linkedin = linkedinMatch[0].startsWith('http') ? linkedinMatch[0] : 'https://' + linkedinMatch[0];
 
-    // === GITHUB ===
+    // GitHub
     const githubMatch = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-]+\/?/i);
     if (githubMatch) data.github = githubMatch[0].startsWith('http') ? githubMatch[0] : 'https://' + githubMatch[0];
 
-    // === WEBSITE ===
+    // Website
     const websiteMatch = text.match(/(?:https?:\/\/)?(?:www\.)?[\w\-]+\.\w{2,}(?:\/\S*)?/g);
     if (websiteMatch) {
       const site = websiteMatch.find(s => !s.includes('linkedin') && !s.includes('github') && !s.includes('@'));
       if (site) data.website = site.startsWith('http') ? site : 'https://' + site;
     }
 
-    // === FULL NAME ===
-    // Strategy: look for the first line that looks like a name
-    // (2-5 words, mostly letters, not an email, not a section header)
-    const nameIndicators = ['name', 'نام', 'vorname', 'nachname', 'full name'];
+    // Name
     const sectionHeaders = ['experience', 'education', 'skills', 'summary', 'about', 'contact',
       'profile', 'work', 'projects', 'certifications', 'languages', 'interests',
       'تجربه', 'تحصیلات', 'مهارت', 'درباره', 'تماس', 'پروژه'];
-
     for (const line of lines) {
       const lower = line.toLowerCase();
-      // Skip section headers
       if (sectionHeaders.some(h => lower.includes(h))) continue;
-      // Skip emails, URLs, phone numbers
       if (lower.includes('@') || lower.includes('http') || lower.includes('www')) continue;
-      // Skip lines that are too short or too long
       if (line.length < 2 || line.length > 60) continue;
-      // Skip lines with numbers (likely phone/address)
       if (/\d{3,}/.test(line)) continue;
-
-      // Check if it looks like a name
       const words = line.split(/\s+/);
       if (words.length >= 2 && words.length <= 5) {
-        // English name: mostly letters
-        if (/^[A-Za-zÀ-ÿÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖØÙÚÛÜÝÞßŒœĄąĆćĘęŁłŃńŚśŹźŻż\s\-\.]+$/.test(line)) {
-          data.fullName = line;
-          break;
-        }
-        // Persian/Arabic name
-        if (/^[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF\s]+$/.test(line)) {
-          data.fullName = line;
-          break;
+        if (/^[A-Za-zÀ-ÿ\s\-\.]+$/.test(line) || /^[\u0600-\u06FF\s]+$/.test(line)) {
+          data.fullName = line; break;
         }
       }
     }
 
-    // === SECTION-BASED EXTRACTION ===
+    // Sections
     const fullText = lines.join('\n');
+    const sec = (pattern) => {
+      const m = fullText.match(pattern);
+      return m ? cleanText(m[1]) : '';
+    };
+    data.skills = sec(/(?:skills?|capabilities|technologies|مهارت|fähigkeiten)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|work|education|projects|summary|about|contact|تجربه|تحصیلات|پروژه|درباره)|\n\n\n|$)/i);
+    data.experience = sec(/(?:experience|work experience|work history|employment|سابقه کاری|تجربه کاری|berufserfahrung)[:\s]*\n?([\s\S]*?)(?=\n(?:education|skills|projects|summary|about|contact|certifications|تحصیلات|مهارت|پروژه|درباره)|\n\n\n|$)/i);
+    data.education = sec(/(?:education|academic|qualification|degree|تحصیلات|bildung|ausbildung|studium)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|skills|projects|summary|about|contact|certifications|تجربه|مهارت|پروژه|درباره)|\n\n\n|$)/i);
+    data.summary = sec(/(?:about me|summary|profile|objective|bio|overview|درباره من|über mich|profil)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|education|skills|work|contact|تجربه|تحصیلات|مهارت|تماس)|\n\n\n|$)/i);
 
-    // Skills
-    const skillsMatch = fullText.match(/(?:skills?|capabilities|technologies|مهارت|مهارات|fähigkeiten|tech stack)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|work|education|projects|summary|about|contact|تجربه|تحصیلات|پروژه|درباره)|\n\n\n|\Z)/i);
-    if (skillsMatch) data.skills = cleanText(skillsMatch[1]);
-
-    // Experience
-    const expMatch = fullText.match(/(?:experience|work experience|work history|employment|سابقه کاری|تجربه کاری|berufserfahrung|berufserfahrungen)[:\s]*\n?([\s\S]*?)(?=\n(?:education|skills|projects|summary|about|contact|certifications|تحصیلات|مهارت|پروژه|درباره)|\n\n\n|\Z)/i);
-    if (expMatch) data.experience = cleanText(expMatch[1]);
-
-    // Education
-    const eduMatch = fullText.match(/(?:education|academic|qualification|degree|تحصیلات|bildung|ausbildung|studium)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|skills|projects|summary|about|contact|certifications|تجربه|مهارت|پروژه|درباره)|\n\n\n|\Z)/i);
-    if (eduMatch) data.education = cleanText(eduMatch[1]);
-
-    // Summary / About
-    const summaryMatch = fullText.match(/(?:about me|summary|profile|objective|bio|overview|درباره من|درباره|über mich|profil)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|education|skills|work|contact|تجربه|تحصیلات|مهارت|تماس)|\n\n\n|\Z)/i);
-    if (summaryMatch) data.summary = cleanText(summaryMatch[1]);
-    else if (lines.length > 0) {
-      // Use first 2-3 lines as summary if they're long enough
-      const firstLines = lines.slice(0, 3).join(' ');
-      if (firstLines.length > 30 && firstLines.length < 600 && !data.fullName) {
-        data.summary = firstLines;
-      }
-    }
-
-    // Address (look for city/country patterns)
+    // Address
     const addressMatch = fullText.match(/(?:address|location|stadt|ort|wohnort|آدرس)[:\s]*([^\n]+)/i);
     if (addressMatch) data.address = addressMatch[1].trim();
     else {
-      // Try to find a city name
-      const cityMatch = fullText.match(/(?:Berlin|München|Hamburg|Frankfurt|Köln|Stuttgart|Düsseldorf|Leipzig|Dresden|Hannover|Wien|Zürich|Bern|Amsterdam|Rotterdam|London|Paris|Tehran|Tehran|Isfahan|Shiraz|Tabriz)/i);
+      const cityMatch = fullText.match(/(?:Berlin|München|Hamburg|Frankfurt|Köln|Stuttgart|Düsseldorf|Leipzig|Dresden|Hannover|Wien|Zürich|Bern|Amsterdam|London|Paris|Tehran|Isfahan|Shiraz|Tabriz)/i);
       if (cityMatch) data.address = cityMatch[0];
     }
 
-    // Date of Birth
+    // DOB
     const dobMatch = fullText.match(/(?:date of birth|dob|geburtstag|تاریخ تولد|تولد|born)[:\s]*(\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}|\d{4}[\/\.\-]\d{1,2}[\/\.\-]\d{1,2})/i);
     if (dobMatch) data.dateOfBirth = dobMatch[1];
 
@@ -274,23 +237,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const natMatch = fullText.match(/(?:nationality|staatsangehörigkeit|ملیت)[:\s]*([^\n]+)/i);
     if (natMatch) data.nationality = natMatch[1].trim();
 
-    // Visa Status
+    // Visa
     const visaMatch = fullText.match(/(?:visa|work permit|aufenthaltstitel|arbeitserlaubnis|ویزا|اقامت)[:\s]*([^\n]+)/i);
     if (visaMatch) data.visaStatus = visaMatch[1].trim();
 
     return data;
   }
 
-  // Clean extracted text
   function cleanText(text) {
-    return text
-      .replace(/\n{3,}/g, '\n\n')  // Remove excessive newlines
-      .replace(/^\s*[\-\*•]\s*/gm, '')  // Remove bullet points
-      .trim()
-      .substring(0, 1000);  // Limit length
+    return text.replace(/\n{3,}/g, '\n\n').replace(/^\s*[\-\*•]\s*/gm, '').trim().substring(0, 1000);
   }
 
-  // ==================== FILE PROCESSING ====================
+  // ==================== FILE PROCESSING (XSS-SAFE) ====================
   async function processFile(file) {
     showStatus('در حال پردازش فایل...', '');
     try {
@@ -299,10 +257,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
       dropZone.style.display = 'none';
       uploadedFile.style.display = 'flex';
-      fileName.textContent = file.name;
+      fileName.textContent = file.name; // textContent = safe
 
       extractedData.style.display = 'block';
-      dataPreview.innerHTML = '';
+      // SAFE: build DOM elements, no innerHTML
+      while (dataPreview.firstChild) dataPreview.removeChild(dataPreview.firstChild);
 
       let fieldCount = 0;
       for (const [key, value] of Object.entries(parsed)) {
@@ -310,28 +269,30 @@ document.addEventListener('DOMContentLoaded', () => {
           fieldCount++;
           const field = document.createElement('div');
           field.className = 'field';
-          field.innerHTML = `
-            <span class="field-label">${getFieldLabel(key)}</span>
-            <span class="field-value">${truncate(value, 60)}</span>
-          `;
+          const label = document.createElement('span');
+          label.className = 'field-label';
+          label.textContent = getFieldLabel(key);
+          const val = document.createElement('span');
+          val.className = 'field-value';
+          val.textContent = truncate(value, 60);
+          field.appendChild(label);
+          field.appendChild(val);
           dataPreview.appendChild(field);
         }
       }
 
       if (fieldCount === 0) {
-        dataPreview.innerHTML = '<div style="color:#ff4444;padding:8px">⚠️ اطلاعاتی استخراج نشد. فایل دیگری امتحان کنید.</div>';
+        const warn = document.createElement('div');
+        warn.style.cssText = 'color:#ff4444;padding:8px';
+        warn.textContent = '⚠️ اطلاعاتی استخراج نشد. فایل دیگری امتحان کنید.';
+        dataPreview.appendChild(warn);
       }
 
       chrome.storage.local.set({ resumeData: parsed });
-      showStatus(`✅ ${fieldCount} فیلد استخراج شد!`, 'success');
+      showStatus(`${fieldCount} فیلد استخراج شد!`, 'success');
       fillBtn.style.display = 'block';
-
-      // Debug: log parsed data
-      console.log('Parsed resume:', parsed);
-
     } catch (error) {
       showStatus('❌ خطا: ' + error.message, 'error');
-      console.error('Parse error:', error);
     }
   }
 
@@ -354,13 +315,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function formatSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / 1048576).toFixed(1) + ' MB';
   }
 
   function showStatus(text, type) {
     statusText.textContent = text;
-    statusBar.className = 'status-bar ' + type;
+    statusBar.className = 'status-bar ' + (type || '');
   }
 
   // ==================== EVENT LISTENERS ====================
@@ -379,21 +340,28 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('saveProfile').addEventListener('click', () => {
     const profile = {};
     ['fullName', 'email', 'phone', 'address', 'linkedin', 'github', 'website', 'summary'].forEach(f => {
-      profile[f] = document.getElementById(f).value;
+      profile[f] = sanitize(document.getElementById(f).value);
     });
     chrome.storage.local.set({ profile });
     showStatus('✅ پروفایل ذخیره شد!', 'success');
   });
 
+  // SECURE: API key stored encrypted via SecureStorage
   document.getElementById('saveSettings').addEventListener('click', () => {
-    chrome.storage.local.set({
-      settings: {
-        apiKey: document.getElementById('apiKey').value,
-        autoFillEnabled: document.getElementById('autoFillEnabled').checked,
-        jobSitesOnly: document.getElementById('jobSitesOnly').checked,
-        allowedSites: document.getElementById('allowedSites').value.split(',').map(s => s.trim())
-      }
-    });
+    const apiKeyVal = document.getElementById('apiKey').value;
+    const settings = {
+      autoFillEnabled: document.getElementById('autoFillEnabled').checked,
+      jobSitesOnly: document.getElementById('jobSitesOnly').checked,
+      allowedSites: document.getElementById('allowedSites').value.split(',').map(s => s.trim())
+    };
+    // Store API key separately (encrypted if SecureStorage available)
+    if (window.SecureStorage && apiKeyVal) {
+      window.SecureStorage.set('apiKey', apiKeyVal);
+      settings.hasApiKey = true;
+    } else {
+      settings.apiKey = apiKeyVal;
+    }
+    chrome.storage.local.set({ settings });
     showStatus('✅ تنظیمات ذخیره شد!', 'success');
   });
 
@@ -444,9 +412,9 @@ document.addEventListener('DOMContentLoaded', () => {
       let result = '';
       switch (target) {
         case 'txt': result = text; break;
-        case 'json': result = JSON.stringify({ filename: currentConvertFile.name, extractedAt: new Date().toISOString(), content: text, fields: parseResume(text) }, null, 2); break;
+        case 'json': result = JSON.stringify({ filename: sanitize(currentConvertFile.name), extractedAt: new Date().toISOString(), content: text, fields: parseResume(text) }, null, 2); break;
         case 'csv': const f = parseResume(text); result = [['Field', 'Value'], ...Object.entries(f).map(([k, v]) => [k, `"${(v || '').replace(/"/g, '""')}"`])].map(r => r.join(',')).join('\n'); break;
-        case 'html': result = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${currentConvertFile.name}</title><style>body{font-family:Arial;max-width:800px;margin:0 auto;padding:20px}h1{color:#00d4ff}.f{margin:10px 0;padding:10px;background:#f5f5f5;border-radius:5px}.l{font-weight:bold}.v{color:#666;margin-top:5px}</style></head><body><h1>📄 ${currentConvertFile.name}</h1>${Object.entries(parseResume(text)).map(([k, v]) => v ? `<div class="f"><div class="l">${k}</div><div class="v">${v}</div></div>` : '').join('')}<hr><pre>${text}</pre></body></html>`; break;
+        case 'html': result = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${sanitize(currentConvertFile.name)}</title><style>body{font-family:Arial;max-width:800px;margin:0 auto;padding:20px}h1{color:#00d4ff}.f{margin:10px 0;padding:10px;background:#f5f5f5;border-radius:5px}.l{font-weight:bold}.v{color:#666;margin-top:5px}</style></head><body><h1>📄 ${sanitize(currentConvertFile.name)}</h1>${Object.entries(parseResume(text)).map(([k, v]) => v ? `<div class="f"><div class="l">${sanitize(k)}</div><div class="v">${sanitize(v)}</div></div>` : '').join('')}<hr><pre>${sanitize(text)}</pre></body></html>`; break;
         case 'md': let md = `# 📄 ${currentConvertFile.name}\n\n`; Object.entries(parseResume(text)).forEach(([k, v]) => { if (v) md += `## ${k}\n\n${v}\n\n`; }); md += `---\n\n## Full Text\n\n\`\`\`\n${text}\n\`\`\`\n`; result = md; break;
         default: result = text;
       }
@@ -480,7 +448,7 @@ document.addEventListener('DOMContentLoaded', () => {
     navigator.clipboard.writeText(currentConvertResult).then(() => showStatus('📋 کپی شد!', 'success'));
   });
 
-  // ==================== BATCH ====================
+  // ==================== BATCH (XSS-SAFE, no inline handlers) ====================
   batchDropZone.addEventListener('click', () => batchFileInput.click());
   batchDropZone.addEventListener('dragover', (e) => { e.preventDefault(); batchDropZone.classList.add('dragover'); });
   batchDropZone.addEventListener('dragleave', () => batchDropZone.classList.remove('dragover'));
@@ -496,13 +464,28 @@ document.addEventListener('DOMContentLoaded', () => {
     if (batchFileList.length === 0) { batchFiles.style.display = 'none'; batchConvertBtn.style.display = 'none'; return; }
     batchFiles.style.display = 'block';
     batchConvertBtn.style.display = 'block';
-    batchFiles.innerHTML = '';
+    // SAFE: build DOM elements, no innerHTML
+    while (batchFiles.firstChild) batchFiles.removeChild(batchFiles.firstChild);
     batchFileList.forEach((f, i) => {
-      batchFiles.innerHTML += `<div class="batch-file-item"><span class="name">📄 ${f.name}</span><span class="size">${formatSize(f.size)}</span><button class="btn btn-danger btn-sm" onclick="window.removeBatchFile(${i})">✕</button></div>`;
+      const item = document.createElement('div');
+      item.className = 'batch-file-item';
+      const name = document.createElement('span');
+      name.className = 'name';
+      name.textContent = '📄 ' + f.name;
+      const size = document.createElement('span');
+      size.className = 'size';
+      size.textContent = formatSize(f.size);
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-danger btn-sm';
+      btn.textContent = '✕';
+      // SAFE: event listener instead of onclick
+      btn.addEventListener('click', () => { batchFileList.splice(i, 1); updateBatchUI(); });
+      item.appendChild(name);
+      item.appendChild(size);
+      item.appendChild(btn);
+      batchFiles.appendChild(item);
     });
   }
-
-  window.removeBatchFile = (i) => { batchFileList.splice(i, 1); updateBatchUI(); };
 
   batchConvertBtn.addEventListener('click', async () => {
     if (batchFileList.length === 0) return;
@@ -512,8 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
     for (const file of batchFileList) {
       try {
         const text = await extractText(file);
-        const result = text;
-        const blob = new Blob([result], { type: 'text/plain' });
+        const blob = new Blob([text], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -521,19 +503,25 @@ document.addEventListener('DOMContentLoaded', () => {
         a.click();
         URL.revokeObjectURL(url);
         ok++;
-      } catch (e) { console.error(e); }
+      } catch (e) { /* silent */ }
     }
     batchConvertBtn.disabled = false;
     showStatus(`✅ ${ok}/${batchFileList.length} تبدیل شد`, 'success');
   });
 
   // ==================== LOAD SAVED ====================
-  chrome.storage.local.get(['profile', 'settings', 'resumeData'], (result) => {
+  chrome.storage.local.get(['profile', 'settings', 'resumeData'], async (result) => {
     if (result.profile) {
       Object.entries(result.profile).forEach(([k, v]) => { const el = document.getElementById(k); if (el) el.value = v; });
     }
     if (result.settings) {
-      document.getElementById('apiKey').value = result.settings.apiKey || '';
+      // Load API key from SecureStorage if available
+      if (window.SecureStorage && result.settings.hasApiKey) {
+        const key = await window.SecureStorage.get('apiKey');
+        if (key) document.getElementById('apiKey').value = key;
+      } else if (result.settings.apiKey) {
+        document.getElementById('apiKey').value = result.settings.apiKey;
+      }
       document.getElementById('autoFillEnabled').checked = result.settings.autoFillEnabled !== false;
       document.getElementById('jobSitesOnly').checked = result.settings.jobSitesOnly || false;
       document.getElementById('allowedSites').value = (result.settings.allowedSites || []).join(', ');
