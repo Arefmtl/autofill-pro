@@ -10,131 +10,40 @@
   <div class="container">
     <!-- Header -->
     <div class="header">
-      <img src="../logo.png" alt="AutoFill Pro" class="header-logo">
-      <h1>AutoFill Pro</h1>
-      <p class="subtitle">پر کردن خودکار فرم‌ها + تبدیل فایل</p>
-      <p class="author">by <b>Ali Kazemi</b> • v1.5</p>
+      <div class="header-row">
+        <img src="../logo.png" alt="AutoFill Pro" class="header-logo">
+        <div class="header-text">
+          <h1>AutoFill Pro</h1>
+          <p class="subtitle" id="headerSubtitle">پر کردن خودکار فرم‌های اپلای</p>
+        </div>
+      </div>
+      <div class="header-links">
+        <a href="https://github.com/Arefmtl/autofill-pro" target="_blank" class="header-link" title="GitHub">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2 0 1.9 1.2 1.9 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 016 0C17.3 5 18.3 5.3 18.3 5.3c.6 1.6.2 2.8.1 3.2.8.8 1.3 1.9 1.3 3.1 0 4.6-2.8 5.7-5.5 6 .4.3.8 1 .8 2v3c0 .3.2.7.8.6A12 12 0 0012 .3"/></svg>
+          <span id="versionBadge">v1.8</span>
+        </a>
+        <a href="https://github.com/Arefmtl/autofill-pro" target="_blank" class="star-cta" title="Star on GitHub">
+          ⭐ Star
+        </a>
+      </div>
     </div>
 
-    <!-- Tab Navigation -->
+    <!-- Tab Navigation (reordered: Profile first for apply flow) -->
     <div class="tabs">
-      <button class="tab active" data-tab="upload">📄 رزومه</button>
+      <button class="tab active" data-tab="profile">👤 پروفایل</button>
+      <button class="tab" data-tab="upload">📄 رزومه</button>
       <button class="tab" data-tab="convert">🔄 تبدیل</button>
-      <button class="tab" data-tab="profile">👤 پروفایل</button>
       <button class="tab" data-tab="settings">⚙️ تنظیمات</button>
     </div>
 
-    <!-- Upload Tab -->
-    <div class="tab-content active" id="upload">
-      <div class="upload-area" id="dropZone">
-        <div class="upload-icon">📎</div>
-        <p>فایل رزومه رو اینجا بکشید</p>
-        <p class="small">PDF, DOCX, TXT, JPG, PNG</p>
-        <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" hidden>
-        <button class="btn btn-primary" id="selectFile">انتخاب فایل</button>
-      </div>
-
-      <div class="uploaded-file" id="uploadedFile" style="display:none">
-        <div class="file-info">
-          <span class="file-icon">✅</span>
-          <span class="file-name" id="fileName"></span>
-        </div>
-        <button class="btn btn-danger btn-sm" id="removeFile">حذف</button>
-      </div>
-
-      <div class="extracted-data" id="extractedData" style="display:none">
-        <h3>📊 اطلاعات استخراج شده:</h3>
-        <div id="dataPreview"></div>
-        <button class="btn btn-success" id="saveData">💾 ذخیره اطلاعات</button>
-      </div>
-    </div>
-
-    <!-- Convert Tab -->
-    <div class="tab-content" id="convert">
-      <div class="convert-section">
-        <h3>🔄 تبدیل فایل</h3>
-        <p class="small">هر فایلی رو به هر فرمتی تبدیل کن</p>
-
-        <!-- Source Format -->
-        <div class="form-group">
-          <label>فرمت ورودی</label>
-          <select id="sourceFormat">
-            <option value="auto">تشخیص خودکار</option>
-            <option value="pdf">PDF</option>
-            <option value="docx">DOCX (Word)</option>
-            <option value="txt">TXT (متن ساده)</option>
-            <option value="jpg">JPG (عکس)</option>
-            <option value="png">PNG (عکس)</option>
-          </select>
-        </div>
-
-        <!-- Target Format -->
-        <div class="form-group">
-          <label>فرمت خروجی</label>
-          <select id="targetFormat">
-            <option value="txt">TXT (متن ساده)</option>
-            <option value="json">JSON (ساختاریافته)</option>
-            <option value="csv">CSV (جدولی)</option>
-            <option value="html">HTML (صفحه وب)</option>
-            <option value="md">Markdown</option>
-            <option value="pdf">PDF</option>
-          </select>
-        </div>
-
-        <!-- Upload for conversion -->
-        <div class="convert-upload" id="convertDropZone">
-          <div class="upload-icon">📁</div>
-          <p>فایل رو اینجا بکشید یا کلیک کنید</p>
-          <input type="file" id="convertFileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" hidden>
-        </div>
-
-        <!-- Source file info -->
-        <div class="convert-file-info" id="convertFileInfo" style="display:none">
-          <span class="file-icon">📄</span>
-          <span id="convertFileName"></span>
-          <span class="file-size" id="convertFileSize"></span>
-        </div>
-
-        <!-- Convert button -->
-        <button class="btn btn-fill" id="convertBtn" style="display:none">
-          🔄 تبدیل کن
-        </button>
-
-        <!-- Result -->
-        <div class="convert-result" id="convertResult" style="display:none">
-          <h3>✅ نتیجه تبدیل:</h3>
-          <div class="result-preview" id="resultPreview"></div>
-          <div class="result-actions">
-            <button class="btn btn-success" id="downloadResult">📥 دانلود</button>
-            <button class="btn btn-primary" id="copyResult">📋 کپی</button>
-          </div>
-        </div>
-
-        <!-- Batch convert -->
-        <div class="batch-section">
-          <h4>📦 تبدیل دسته‌ای</h4>
-          <p class="small">چند فایل همزمان تبدیل کن</p>
-          <div class="batch-upload" id="batchDropZone">
-            <div class="upload-icon">📂</div>
-            <p>چند فایل رو اینجا بکشید</p>
-            <input type="file" id="batchFileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" multiple hidden>
-          </div>
-          <div id="batchFiles" style="display:none"></div>
-          <button class="btn btn-primary" id="batchConvertBtn" style="display:none">
-            🔄 تبدیل همه
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Profile Tab -->
-    <div class="tab-content" id="profile">
+    <!-- Profile Tab (FIRST = primary use case) -->
+    <div class="tab-content active" id="profile">
       <!-- Profile Selector -->
       <div class="profile-selector">
         <div class="profile-selector-row">
           <select id="profileSelect" class="profile-select"></select>
-          <button class="btn btn-primary btn-sm" id="addProfileBtn">➕</button>
-          <button class="btn btn-danger btn-sm" id="deleteProfileBtn">🗑️</button>
+          <button class="btn btn-primary btn-sm" id="addProfileBtn" title="پروفایل جدید">➕</button>
+          <button class="btn btn-danger btn-sm" id="deleteProfileBtn" title="حذف پروفایل">🗑️</button>
         </div>
         <div class="profile-name-edit" id="profileNameEdit" style="display:none">
           <input type="text" id="profileName" placeholder="نام پروفایل (مثلا: علی - اصلی)">
@@ -187,59 +96,147 @@
         <label id="lblWebsite">وب‌سایت</label>
         <input type="url" id="website" placeholder="https://...">
       </div>
-      <div class="form-group">
-        <label id="lblSummary">درباره من</label>
-        <textarea id="summary" rows="3" placeholder="خلاصه رزومه..."></textarea>
-      </div>
-      <div class="form-group">
-        <label id="lblSkills">مهارت‌ها</label>
-        <textarea id="skills" rows="2" placeholder="Python, ML, SQL, ..."></textarea>
-      </div>
-      <div class="form-group">
-        <label id="lblExperience">تجربه کاری</label>
-        <textarea id="experience" rows="3" placeholder="Data Scientist @ Company (2023-2024)..."></textarea>
-      </div>
-      <div class="form-group">
-        <label id="lblEducation">تحصیلات</label>
-        <textarea id="education" rows="2" placeholder="BME @ Apadana University..."></textarea>
-      </div>
-      <div class="form-group">
-        <label id="lblNationality">ملیت</label>
-        <input type="text" id="nationality" placeholder="Iranian">
-      </div>
-      <div class="form-group">
-        <label id="lblVisa">وضعیت ویزا</label>
-        <input type="text" id="visaStatus" placeholder="Work permit / Blue card">
-      </div>
+
+      <!-- Collapsible: Extra Fields -->
+      <details class="collapsible-section">
+        <summary>📋 اطلاعات بیشتر (مهارت، تجربه، تحصیلات)</summary>
+        <div class="form-group">
+          <label id="lblSummary">درباره من</label>
+          <textarea id="summary" rows="3" placeholder="خلاصه رزومه..."></textarea>
+        </div>
+        <div class="form-group">
+          <label id="lblSkills">مهارت‌ها</label>
+          <textarea id="skills" rows="2" placeholder="Python, ML, SQL, ..."></textarea>
+        </div>
+        <div class="form-group">
+          <label id="lblExperience">تجربه کاری</label>
+          <textarea id="experience" rows="3" placeholder="Data Scientist @ Company (2023-2024)..."></textarea>
+        </div>
+        <div class="form-group">
+          <label id="lblEducation">تحصیلات</label>
+          <textarea id="education" rows="2" placeholder="BME @ Apadana University..."></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group half">
+            <label id="lblNationality">ملیت</label>
+            <input type="text" id="nationality" placeholder="Iranian">
+          </div>
+          <div class="form-group half">
+            <label id="lblVisa">وضعیت ویزا</label>
+            <input type="text" id="visaStatus" placeholder="Work permit">
+          </div>
+        </div>
+      </details>
+
       <button class="btn btn-primary" id="saveProfile">💾 ذخیره پروفایل</button>
       <button class="btn btn-success" id="saveAsProfile" style="display:block;margin-top:8px">📋 ذخیره به عنوان پروفایل جدید</button>
     </div>
 
-    <!-- Settings Tab -->
-    <div class="tab-content" id="settings">
-      <div class="ai-info">
-        <div class="ai-info-header">🤖 فعال‌سازی AI (اختیاری)</div>
-        <p class="ai-info-text">با دادن API Key، هوش مصنوعی فرم‌ها رو بهتر پر می‌کنه</p>
-        <a href="https://opencode.ai" target="_blank" class="ai-link">
-          🔗 API Key رایگان بگیر از OpenCode (Mimo 2.5)
-        </a>
-        <div class="tooltip">
-          <span class="tooltip-icon">ℹ️</span>
-          <div class="tooltip-content">
-            <b>چطور API Key بگیرم؟</b><br>
-            ۱. برو به <a href="https://opencode.ai" target="_blank">opencode.ai</a><br>
-            ۲. ثبت‌نام کن (رایگان)<br>
-            ۳. API Key رو کپی کن<br>
-            ۴. توی فیلد زیر بذار<br>
-            <br>
-            <b>✅ رایگانه!</b> مدل Mimo 2.5
+    <!-- Upload Tab (Upload resume to extract data) -->
+    <div class="tab-content" id="upload">
+      <div class="upload-area" id="dropZone">
+        <div class="upload-icon">📎</div>
+        <p>رزومه‌ات رو اینجا بکش</p>
+        <p class="small">PDF, DOCX, TXT — استخراج خودکار اطلاعات</p>
+        <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" hidden>
+        <button class="btn btn-primary" id="selectFile">انتخاب فایل</button>
+      </div>
+
+      <div class="uploaded-file" id="uploadedFile" style="display:none">
+        <div class="file-info">
+          <span class="file-icon">✅</span>
+          <span class="file-name" id="fileName"></span>
+        </div>
+        <button class="btn btn-danger btn-sm" id="removeFile">حذف</button>
+      </div>
+
+      <div class="extracted-data" id="extractedData" style="display:none">
+        <h3>📊 اطلاعات استخراج شده:</h3>
+        <div id="dataPreview"></div>
+      </div>
+    </div>
+
+    <!-- Convert Tab (utility — secondary use) -->
+    <div class="tab-content" id="convert">
+      <div class="convert-section">
+        <h3>🔄 تبدیل فایل</h3>
+        <p class="small">فرمت رزومه‌ات رو سریع تبدیل کن</p>
+
+        <div class="form-group">
+          <label>فرمت خروجی</label>
+          <select id="targetFormat">
+            <option value="txt">TXT (متن ساده)</option>
+            <option value="json">JSON (ساختاریافته)</option>
+            <option value="csv">CSV (جدولی)</option>
+            <option value="html">HTML (صفحه وب)</option>
+            <option value="md">Markdown</option>
+          </select>
+        </div>
+
+        <div class="convert-upload" id="convertDropZone">
+          <div class="upload-icon">📁</div>
+          <p>فایل رو اینجا بکش یا کلیک کن</p>
+          <input type="file" id="convertFileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" hidden>
+        </div>
+
+        <div class="convert-file-info" id="convertFileInfo" style="display:none">
+          <span class="file-icon">📄</span>
+          <span id="convertFileName"></span>
+          <span class="file-size" id="convertFileSize"></span>
+        </div>
+
+        <button class="btn btn-fill" id="convertBtn" style="display:none">
+          🔄 تبدیل کن
+        </button>
+
+        <div class="convert-result" id="convertResult" style="display:none">
+          <h3>✅ نتیجه:</h3>
+          <div class="result-preview" id="resultPreview"></div>
+          <div class="result-actions">
+            <button class="btn btn-success" id="downloadResult">📥 دانلود</button>
+            <button class="btn btn-primary" id="copyResult">📋 کپی</button>
           </div>
         </div>
+
+        <div class="batch-section">
+          <h4>📦 تبدیل دسته‌ای</h4>
+          <p class="small">چند فایل همزمان</p>
+          <div class="batch-upload" id="batchDropZone">
+            <div class="upload-icon">📂</div>
+            <p>چند فایل رو اینجا بکش</p>
+            <input type="file" id="batchFileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" multiple hidden>
+          </div>
+          <div id="batchFiles" style="display:none"></div>
+          <button class="btn btn-primary" id="batchConvertBtn" style="display:none">
+            🔄 تبدیل همه
+          </button>
+        </div>
       </div>
-      <div class="form-group">
+    </div>
+
+    <!-- Settings Tab -->
+    <div class="tab-content" id="settings">
+      <!-- AI Section (redesigned) -->
+      <div class="ai-card">
+        <div class="ai-card-header">
+          <div class="ai-card-icon">🤖</div>
+          <div class="ai-card-title">هوش مصنوعی</div>
+        </div>
+        <p class="ai-card-desc">با API Key، استخراج اطلاعات دقیق‌تر و هوشمندتر میشه</p>
+        <div class="ai-card-steps">
+          <div class="step">۱. ثبت‌نام رایگان در OpenCode</div>
+          <div class="step">۲. کپی API Key</div>
+          <div class="step">۳. اینجا وارد کن ✅</div>
+        </div>
+        <a href="https://opencode.ai" target="_blank" class="ai-card-btn">
+          🔑 دریافت API Key رایگان
+        </a>
+      </div>
+      <div class="form-group" style="margin-top:12px">
         <label>API Key</label>
         <input type="password" id="apiKey" placeholder="sk-...">
       </div>
+      <div class="divider"></div>
       <div class="toggle-group">
         <label>پر کردن خودکار فعال باشه</label>
         <input type="checkbox" id="autoFillEnabled" checked>
@@ -249,7 +246,7 @@
         <input type="checkbox" id="jobSitesOnly">
       </div>
       <div class="form-group">
-        <label>سایت‌های مجاز (با کاما جدا کنید)</label>
+        <label>سایت‌های مجاز</label>
         <textarea id="allowedSites" rows="2" placeholder="linkedin.com, stepstone.de, indeed.de"></textarea>
       </div>
       <button class="btn btn-primary" id="saveSettings">💾 ذخیره تنظیمات</button>
@@ -262,7 +259,7 @@
       <span id="statusText">آماده</span>
     </div>
 
-    <!-- Fill Button -->
+    <!-- Fill Button (sticky at bottom — always visible) -->
     <button class="btn btn-fill" id="fillBtn" style="display:none">
       🚀 پر کردن فرم
     </button>

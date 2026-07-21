@@ -1,5 +1,10 @@
-// AutoFill Pro v1.6 - Security Hardened
+// AutoFill Pro v1.8 - UX Overhaul
 document.addEventListener('DOMContentLoaded', () => {
+  // Dynamic version badge from manifest
+  const version = chrome.runtime.getManifest().version;
+  const versionBadge = document.getElementById('versionBadge');
+  if (versionBadge) versionBadge.textContent = 'v' + version;
+
   const tabs = document.querySelectorAll('.tab');
   const tabContents = document.querySelectorAll('.tab-content');
   const dropZone = document.getElementById('dropZone');
@@ -10,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const removeFile = document.getElementById('removeFile');
   const extractedData = document.getElementById('extractedData');
   const dataPreview = document.getElementById('dataPreview');
-  const saveData = document.getElementById('saveData');
+  const saveData = document.getElementById('saveData') || { addEventListener: () => {} }; // may not exist anymore
   const fillBtn = document.getElementById('fillBtn');
   const statusBar = document.getElementById('statusBar');
   const statusText = document.getElementById('statusText');
