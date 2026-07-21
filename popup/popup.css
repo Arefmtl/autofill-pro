@@ -522,3 +522,93 @@ body {
 .tooltip:hover .tooltip-content {
   display: block;
 }
+
+/* ==================== MULTI-PROFILE ==================== */
+.profile-selector {
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid #2a2a4a;
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.profile-selector-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.profile-select {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid #3a3a5a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e0e0e0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.profile-select:focus {
+  outline: none;
+  border-color: #00d4ff;
+}
+
+.btn-sm {
+  padding: 6px 10px !important;
+  font-size: 14px !important;
+  min-width: 36px;
+}
+
+.profile-name-edit {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.profile-name-edit input {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid #3a3a5a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e0e0e0;
+  font-size: 13px;
+}
+
+.profile-name-edit input:focus {
+  outline: none;
+  border-color: #00d4ff;
+}
+
+/* Form Row (split fields) */
+.form-row {
+  display: flex;
+  gap: 8px;
+}
+
+.form-group.half {
+  flex: 1;
+}
+
+/* Language selector */
+#resumeLanguage {
+  background: #1a1a2e;
+  border: 1px solid #3a3a5a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #e0e0e0;
+  font-size: 13px;
+  width: 100%;
+  cursor: pointer;
+}
+
+#resumeLanguage:focus {
+  outline: none;
+  border-color: #00d4ff;
+}
+
+/* Buttons in profile */
+#saveAsProfile {
+  background: linear-gradient(135deg, #00ff88, #00d4ff);
+}

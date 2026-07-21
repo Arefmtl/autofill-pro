@@ -129,39 +129,90 @@
 
     <!-- Profile Tab -->
     <div class="tab-content" id="profile">
+      <!-- Profile Selector -->
+      <div class="profile-selector">
+        <div class="profile-selector-row">
+          <select id="profileSelect" class="profile-select"></select>
+          <button class="btn btn-primary btn-sm" id="addProfileBtn">➕</button>
+          <button class="btn btn-danger btn-sm" id="deleteProfileBtn">🗑️</button>
+        </div>
+        <div class="profile-name-edit" id="profileNameEdit" style="display:none">
+          <input type="text" id="profileName" placeholder="نام پروفایل (مثلا: علی - اصلی)">
+          <button class="btn btn-success btn-sm" id="confirmProfileName">✓</button>
+        </div>
+      </div>
+
+      <!-- Language Selector -->
       <div class="form-group">
-        <label>نام کامل</label>
-        <input type="text" id="fullName" placeholder="علی کاظمی">
+        <label id="lblLanguage">🌐 زبان رزومه</label>
+        <select id="resumeLanguage">
+          <option value="fa">🇮🇷 فارسی</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="de">🇩🇪 Deutsch</option>
+        </select>
+      </div>
+
+      <!-- Name (split) -->
+      <div class="form-row">
+        <div class="form-group half">
+          <label id="lblFirstName">نام</label>
+          <input type="text" id="firstName" placeholder="علی">
+        </div>
+        <div class="form-group half">
+          <label id="lblLastName">نام خانوادگی</label>
+          <input type="text" id="lastName" placeholder="کاظمی">
+        </div>
       </div>
       <div class="form-group">
-        <label>ایمیل</label>
+        <label id="lblEmail">ایمیل</label>
         <input type="email" id="email" placeholder="ali@example.com">
       </div>
       <div class="form-group">
-        <label>تلفن</label>
+        <label id="lblPhone">تلفن</label>
         <input type="tel" id="phone" placeholder="+49 170 1234567">
       </div>
       <div class="form-group">
-        <label>آدرس</label>
+        <label id="lblAddress">آدرس</label>
         <input type="text" id="address" placeholder="Berlin, Germany">
       </div>
       <div class="form-group">
-        <label>لینکدین</label>
+        <label id="lblLinkedin">لینکدین</label>
         <input type="url" id="linkedin" placeholder="https://linkedin.com/in/...">
       </div>
       <div class="form-group">
-        <label>گیت‌هاب</label>
+        <label id="lblGithub">گیت‌هاب</label>
         <input type="url" id="github" placeholder="https://github.com/...">
       </div>
       <div class="form-group">
-        <label>وب‌سایت</label>
+        <label id="lblWebsite">وب‌سایت</label>
         <input type="url" id="website" placeholder="https://...">
       </div>
       <div class="form-group">
-        <label>درباره من</label>
+        <label id="lblSummary">درباره من</label>
         <textarea id="summary" rows="3" placeholder="خلاصه رزومه..."></textarea>
       </div>
+      <div class="form-group">
+        <label id="lblSkills">مهارت‌ها</label>
+        <textarea id="skills" rows="2" placeholder="Python, ML, SQL, ..."></textarea>
+      </div>
+      <div class="form-group">
+        <label id="lblExperience">تجربه کاری</label>
+        <textarea id="experience" rows="3" placeholder="Data Scientist @ Company (2023-2024)..."></textarea>
+      </div>
+      <div class="form-group">
+        <label id="lblEducation">تحصیلات</label>
+        <textarea id="education" rows="2" placeholder="BME @ Apadana University..."></textarea>
+      </div>
+      <div class="form-group">
+        <label id="lblNationality">ملیت</label>
+        <input type="text" id="nationality" placeholder="Iranian">
+      </div>
+      <div class="form-group">
+        <label id="lblVisa">وضعیت ویزا</label>
+        <input type="text" id="visaStatus" placeholder="Work permit / Blue card">
+      </div>
       <button class="btn btn-primary" id="saveProfile">💾 ذخیره پروفایل</button>
+      <button class="btn btn-success" id="saveAsProfile" style="display:block;margin-top:8px">📋 ذخیره به عنوان پروفایل جدید</button>
     </div>
 
     <!-- Settings Tab -->

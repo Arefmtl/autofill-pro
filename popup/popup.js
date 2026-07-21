@@ -257,10 +257,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
       dropZone.style.display = 'none';
       uploadedFile.style.display = 'flex';
-      fileName.textContent = file.name; // textContent = safe
+      fileName.textContent = file.name;
 
       extractedData.style.display = 'block';
-      // SAFE: build DOM elements, no innerHTML
       while (dataPreview.firstChild) dataPreview.removeChild(dataPreview.firstChild);
 
       let fieldCount = 0;
@@ -288,9 +287,29 @@ document.addEventListener('DOMContentLoaded', () => {
         dataPreview.appendChild(warn);
       }
 
+      // Save to resumeData and load into profile tab
       chrome.storage.local.set({ resumeData: parsed });
-      showStatus(`${fieldCount} فیلد استخراج شد!`, 'success');
+
+      // Auto-populate current profile with extracted data
+      if (!profiles[currentProfileId]) {
+        profiles[currentProfileId] = { name: 'Profile 1', data: {}, language: 'fa' };
+      }
+      // Split fullName into first/last if parsed as single field
+      if (parsed.fullName && !parsed.firstName) {
+        const parts = parsed.fullName.split(/\s+/);
+        parsed.firstName = parts[0] || '';
+        parsed.lastName = parts.slice(1).join(' ') || '';
+      }
+      Object.assign(profiles[currentProfileId].data, parsed);
+      loadProfileToForm();
+      saveProfiles();
+
+      showStatus(`${fieldCount} فیلد استخراج شد! → پرشون تب پروفایل`, 'success');
       fillBtn.style.display = 'block';
+
+      // Auto-switch to profile tab
+      const profileTab = document.querySelector('[data-tab="profile"]');
+      if (profileTab) profileTab.click();
     } catch (error) {
       showStatus('❌ خطا: ' + error.message, 'error');
     }
@@ -337,13 +356,209 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  document.getElementById('saveProfile').addEventListener('click', () => {
-    const profile = {};
-    ['fullName', 'email', 'phone', 'address', 'linkedin', 'github', 'website', 'summary'].forEach(f => {
-      profile[f] = sanitize(document.getElementById(f).value);
+  // ==================== MULTI-PROFILE SYSTEM ====================
+  const PROFILE_FIELDS = ['firstName', 'lastName', 'email', 'phone', 'address',
+    'linkedin', 'github', 'website', 'summary', 'skills', 'experience',
+    'education', 'nationality', 'visaStatus'];
+
+  let profiles = {};
+  let currentProfileId = 'default';
+  let uiLanguage = 'fa';
+
+  // i18n labels
+  const i18n = {
+    fa: {
+      firstName: 'نام', lastName: 'نام خانوادگی', email: 'ایمیل', phone: 'تلفن',
+      address: 'آدرس', linkedin: 'لینکدین', github: 'گیت‌هاب', website: 'وب‌سایت',
+      summary: 'درباره من', skills: 'مهارت‌ها', experience: 'تجربه کاری',
+      education: 'تحصیلات', nationality: 'ملیت', visaStatus: 'وضعیت ویزا',
+      language: '🌐 زبان رزومه', saved: '✅ پروفایل ذخیره شد!',
+      savedAs: '✅ پروفایل جدید ذخیره شد!', deleted: '✅ پروفایل حذف شد',
+      confirmDelete: 'آیا از حذف این پروفایل مطمئن هستید؟', namePrompt: 'نام پروفایل جدید',
+      cannotDelete: '❌ حداقل یک پروفایل باید باقی بماند', fillPrompt: 'نام پروفایل را وارد کنید'
+    },
+    en: {
+      firstName: 'First Name', lastName: 'Last Name', email: 'Email', phone: 'Phone',
+      address: 'Address', linkedin: 'LinkedIn', github: 'GitHub', website: 'Website',
+      summary: 'About Me', skills: 'Skills', experience: 'Experience',
+      education: 'Education', nationality: 'Nationality', visaStatus: 'Visa Status',
+      language: '🌐 Resume Language', saved: '✅ Profile saved!',
+      savedAs: '✅ New profile saved!', deleted: '✅ Profile deleted',
+      confirmDelete: 'Delete this profile?', namePrompt: 'New profile name',
+      cannotDelete: '❌ At least one profile required', fillPrompt: 'Enter profile name'
+    },
+    de: {
+      firstName: 'Vorname', lastName: 'Nachname', email: 'E-Mail', phone: 'Telefon',
+      address: 'Adresse', linkedin: 'LinkedIn', github: 'GitHub', website: 'Website',
+      summary: 'Über mich', skills: 'Fähigkeiten', experience: 'Berufserfahrung',
+      education: 'Bildung', nationality: 'Nationalität', visaStatus: 'Visum-Status',
+      language: '🌐 Lebenslauf-Sprache', saved: '✅ Profil gespeichert!',
+      savedAs: '✅ Neues Profil gespeichert!', deleted: '✅ Profil gelöscht',
+      confirmDelete: 'Profil löschen?', namePrompt: 'Neuer Profilname',
+      cannotDelete: '❌ Mindestens ein Profil erforderlich', fillPrompt: 'Profilname eingeben'
+    }
+  };
+
+  // Load profiles from storage
+  async function loadProfiles() {
+    return new Promise(resolve => {
+      chrome.storage.local.get(['profiles', 'currentProfileId', 'uiLanguage'], (result) => {
+        profiles = result.profiles || {
+          default: { name: 'Profile 1', data: {}, language: 'fa' }
+        };
+        currentProfileId = result.currentProfileId || 'default';
+        uiLanguage = result.uiLanguage || 'fa';
+        resolve();
+      });
     });
-    chrome.storage.local.set({ profile });
-    showStatus('✅ پروفایل ذخیره شد!', 'success');
+  }
+
+  async function saveProfiles() {
+    return new Promise(resolve => {
+      chrome.storage.local.set({ profiles, currentProfileId, uiLanguage }, resolve);
+    });
+  }
+
+  function applyLanguage() {
+    const labels = i18n[uiLanguage] || i18n.fa;
+    const labelMap = {
+      lblFirstName: 'firstName', lblLastName: 'lastName', lblEmail: 'email',
+      lblPhone: 'phone', lblAddress: 'address', lblLinkedin: 'linkedin',
+      lblGithub: 'github', lblWebsite: 'website', lblSummary: 'summary',
+      lblSkills: 'skills', lblExperience: 'experience', lblEducation: 'education',
+      lblNationality: 'nationality', lblVisa: 'visaStatus', lblLanguage: 'language'
+    };
+    Object.entries(labelMap).forEach(([id, key]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = labels[key];
+    });
+    document.documentElement.lang = uiLanguage;
+    document.documentElement.dir = uiLanguage === 'fa' ? 'rtl' : 'ltr';
+  }
+
+  // Populate profile select dropdown
+  function refreshProfileSelect() {
+    const select = document.getElementById('profileSelect');
+    while (select.firstChild) select.removeChild(select.firstChild);
+    Object.entries(profiles).forEach(([id, p]) => {
+      const opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = p.name || id;
+      if (id === currentProfileId) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  // Load profile data into form fields
+  function loadProfileToForm() {
+    const p = profiles[currentProfileId];
+    if (!p) return;
+    // Split fullName if present (migration)
+    if (p.data.fullName && !p.data.firstName && !p.data.lastName) {
+      const parts = p.data.fullName.split(/\s+/);
+      p.data.firstName = parts[0] || '';
+      p.data.lastName = parts.slice(1).join(' ') || '';
+      delete p.data.fullName;
+    }
+    PROFILE_FIELDS.forEach(f => {
+      const el = document.getElementById(f);
+      if (el) el.value = p.data[f] || '';
+    });
+    const langSelect = document.getElementById('resumeLanguage');
+    if (langSelect && p.language) langSelect.value = p.language;
+  }
+
+  // Collect form data into profile
+  function collectProfileData() {
+    const data = {};
+    PROFILE_FIELDS.forEach(f => {
+      const el = document.getElementById(f);
+      if (el) data[f] = sanitize(el.value);
+    });
+    return data;
+  }
+
+  function generateId() {
+    return 'p_' + Date.now().toString(36) + Math.random().toString(36).substring(2, 6);
+  }
+
+  // Profile select change
+  document.getElementById('profileSelect').addEventListener('change', (e) => {
+    currentProfileId = e.target.value;
+    loadProfileToForm();
+    saveProfiles();
+  });
+
+  // Add profile button
+  document.getElementById('addProfileBtn').addEventListener('click', () => {
+    document.getElementById('profileNameEdit').style.display = 'flex';
+    const nameInput = document.getElementById('profileName');
+    nameInput.value = '';
+    nameInput.focus();
+    nameInput.placeholder = i18n[uiLanguage].fillPrompt || 'نام پروفایل';
+  });
+
+  // Confirm new profile name
+  document.getElementById('confirmProfileName').addEventListener('click', () => {
+    const name = document.getElementById('profileName').value.trim() || `Profile ${Object.keys(profiles).length + 1}`;
+    const id = generateId();
+    profiles[id] = { name, data: {}, language: uiLanguage };
+    currentProfileId = id;
+    document.getElementById('profileNameEdit').style.display = 'none';
+    refreshProfileSelect();
+    loadProfileToForm();
+    saveProfiles();
+    showStatus(i18n[uiLanguage].savedAs, 'success');
+  });
+
+  // Delete profile
+  document.getElementById('deleteProfileBtn').addEventListener('click', () => {
+    if (Object.keys(profiles).length <= 1) {
+      showStatus(i18n[uiLanguage].cannotDelete, 'error');
+      return;
+    }
+    if (!confirm(i18n[uiLanguage].confirmDelete)) return;
+    delete profiles[currentProfileId];
+    currentProfileId = Object.keys(profiles)[0];
+    refreshProfileSelect();
+    loadProfileToForm();
+    saveProfiles();
+    showStatus(i18n[uiLanguage].deleted, 'success');
+  });
+
+  // Save current profile
+  document.getElementById('saveProfile').addEventListener('click', () => {
+    if (!profiles[currentProfileId]) {
+      profiles[currentProfileId] = { name: 'Profile', data: {}, language: 'fa' };
+    }
+    profiles[currentProfileId].data = collectProfileData();
+    profiles[currentProfileId].language = document.getElementById('resumeLanguage').value;
+    // Also save as resumeData for content script compatibility
+    const langSelect = document.getElementById('resumeLanguage');
+    const data = { ...profiles[currentProfileId].data };
+    // For backward compat: combine firstName+lastName into fullName for form filling
+    data.fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
+    chrome.storage.local.set({ resumeData: data, profile: data });
+    saveProfiles();
+    showStatus(i18n[uiLanguage].saved, 'success');
+  });
+
+  // Save as new profile
+  document.getElementById('saveAsProfile').addEventListener('click', () => {
+    const name = prompt(i18n[uiLanguage].namePrompt, `Profile ${Object.keys(profiles).length + 1}`);
+    if (!name) return;
+    const id = generateId();
+    profiles[id] = { name, data: collectProfileData(), language: document.getElementById('resumeLanguage').value };
+    currentProfileId = id;
+    refreshProfileSelect();
+    saveProfiles();
+    showStatus(i18n[uiLanguage].savedAs, 'success');
+  });
+
+  // Language change
+  document.getElementById('resumeLanguage').addEventListener('change', (e) => {
+    if (profiles[currentProfileId]) profiles[currentProfileId].language = e.target.value;
+    saveProfiles();
   });
 
   // SECURE: API key stored encrypted via SecureStorage
@@ -544,22 +759,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ==================== LOAD SAVED ====================
-  chrome.storage.local.get(['profile', 'settings', 'resumeData'], async (result) => {
-    if (result.profile) {
-      Object.entries(result.profile).forEach(([k, v]) => { const el = document.getElementById(k); if (el) el.value = v; });
-    }
-    if (result.settings) {
-      // Load API key from SecureStorage if available
-      if (window.SecureStorage && result.settings.hasApiKey) {
-        const key = await window.SecureStorage.get('apiKey');
-        if (key) document.getElementById('apiKey').value = key;
-      } else if (result.settings.apiKey) {
-        document.getElementById('apiKey').value = result.settings.apiKey;
+  // Init profiles on startup
+  (async () => {
+    await loadProfiles();
+    refreshProfileSelect();
+    loadProfileToForm();
+    applyLanguage();
+
+    chrome.storage.local.get(['settings', 'resumeData'], async (result) => {
+      if (result.settings) {
+        // Load API key from SecureStorage if available
+        if (window.SecureStorage && result.settings.hasApiKey) {
+          const key = await window.SecureStorage.get('apiKey');
+          if (key) document.getElementById('apiKey').value = key;
+        } else if (result.settings.apiKey) {
+          document.getElementById('apiKey').value = result.settings.apiKey;
+        }
+        document.getElementById('autoFillEnabled').checked = result.settings.autoFillEnabled !== false;
+        document.getElementById('jobSitesOnly').checked = result.settings.jobSitesOnly || false;
+        document.getElementById('allowedSites').value = (result.settings.allowedSites || []).join(', ');
       }
-      document.getElementById('autoFillEnabled').checked = result.settings.autoFillEnabled !== false;
-      document.getElementById('jobSitesOnly').checked = result.settings.jobSitesOnly || false;
-      document.getElementById('allowedSites').value = (result.settings.allowedSites || []).join(', ');
-    }
-    if (result.resumeData) { fillBtn.style.display = 'block'; showStatus('📄 رزومه بارگذاری شده', 'success'); }
-  });
+      if (result.resumeData) { fillBtn.style.display = 'block'; showStatus('📄 رزومه بارگذاری شده', 'success'); }
+    });
+  })();
 });
