@@ -13,6 +13,7 @@
       <div class="logo">⚡</div>
       <h1>AutoFill Pro</h1>
       <p class="subtitle">پر کردن خودکار فرم‌ها + تبدیل فایل</p>
+      <p class="author">by <b>Ali Kazemi</b> • v1.4</p>
     </div>
 
     <!-- Tab Navigation -->
@@ -165,9 +166,28 @@
 
     <!-- Settings Tab -->
     <div class="tab-content" id="settings">
+      <div class="ai-info">
+        <div class="ai-info-header">🤖 فعال‌سازی AI (اختیاری)</div>
+        <p class="ai-info-text">با دادن API Key، هوش مصنوعی فرم‌ها رو بهتر پر می‌کنه</p>
+        <a href="https://opencode.ai" target="_blank" class="ai-link">
+          🔗 API Key رایگان بگیر از OpenCode (Mimo 2.5)
+        </a>
+        <div class="tooltip">
+          <span class="tooltip-icon">ℹ️</span>
+          <div class="tooltip-content">
+            <b>چطور API Key بگیرم؟</b><br>
+            ۱. برو به <a href="https://opencode.ai" target="_blank">opencode.ai</a><br>
+            ۲. ثبت‌نام کن (رایگان)<br>
+            ۳. API Key رو کپی کن<br>
+            ۴. توی فیلد زیر بذار<br>
+            <br>
+            <b>✅ رایگانه!</b> مدل Mimo 2.5
+          </div>
+        </div>
+      </div>
       <div class="form-group">
-        <label>API Key (اختیاری - برای OCR و AI)</label>
-        <input type="password" id="apiKey" placeholder="OpenAI / Anthropic API Key">
+        <label>API Key</label>
+        <input type="password" id="apiKey" placeholder="sk-...">
       </div>
       <div class="toggle-group">
         <label>پر کردن خودکار فعال باشه</label>

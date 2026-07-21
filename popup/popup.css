@@ -421,3 +421,96 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #3a3a5a;
 }
+
+/* Author */
+.author {
+  font-size: 11px;
+  color: #666;
+  margin-top: 4px;
+}
+
+.author b {
+  color: #00d4ff;
+}
+
+/* AI Info Box */
+.ai-info {
+  background: linear-gradient(135deg, rgba(0, 212, 255, 0.1), rgba(124, 58, 237, 0.1));
+  border: 1px solid #2a2a4a;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.ai-info-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: #00d4ff;
+  margin-bottom: 8px;
+}
+
+.ai-info-text {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 8px;
+}
+
+.ai-link {
+  display: inline-block;
+  background: #00d4ff;
+  color: #000;
+  padding: 8px 16px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.ai-link:hover {
+  background: #00b8e6;
+  transform: translateY(-1px);
+}
+
+/* Tooltip */
+.tooltip {
+  position: relative;
+  display: inline-block;
+  margin-top: 8px;
+}
+
+.tooltip-icon {
+  cursor: help;
+  font-size: 16px;
+  opacity: 0.6;
+}
+
+.tooltip-icon:hover {
+  opacity: 1;
+}
+
+.tooltip-content {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  background: #1a1a2e;
+  border: 1px solid #00d4ff;
+  border-radius: 8px;
+  padding: 12px;
+  width: 250px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: #e0e0e0;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  direction: rtl;
+}
+
+.tooltip-content a {
+  color: #00d4ff;
+}
+
+.tooltip:hover .tooltip-content {
+  display: block;
+}
