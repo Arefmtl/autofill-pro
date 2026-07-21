@@ -729,39 +729,54 @@ document.addEventListener('DOMContentLoaded', () => {
     showStatus(`✅ ${ok}/${batchFileList.length} تبدیل شد`, 'success');
   });
 
-  // ==================== CHECK UPDATES ====================
+  // ==================== AUTO UPDATE CHECK ====================
   const checkUpdatesBtn = document.getElementById('checkUpdates');
   const updateStatus = document.getElementById('updateStatus');
 
-  if (checkUpdatesBtn) {
-    checkUpdatesBtn.addEventListener('click', async () => {
-      updateStatus.textContent = '⏳ در حال بررسی...';
-      try {
-        const resp = await fetch('https://api.github.com/repos/Arefmtl/autofill-pro/releases/latest');
-        const data = await resp.json();
-        const latest = data.tag_name || 'v1.6';
-        const current = chrome.runtime.getManifest().version;
-        const latestNum = parseFloat(latest.replace('v', ''));
-        const currentNum = parseFloat(current);
+  async function checkForUpdate(silent = false) {
+    if (updateStatus) updateStatus.textContent = '⏳ در حال بررسی...';
+    try {
+      const resp = await fetch('https://api.github.com/repos/Arefmtl/autofill-pro/releases/latest');
+      const data = await resp.json();
+      const latest = data.tag_name || 'v0';
+      const current = chrome.runtime.getManifest().version;
+      const latestNum = parseFloat(latest.replace('v', ''));
+      const currentNum = parseFloat(current);
 
-        if (latestNum > currentNum) {
-          updateStatus.innerHTML = '';
+      if (latestNum > currentNum) {
+        if (updateStatus) {
+          while (updateStatus.firstChild) updateStatus.removeChild(updateStatus.firstChild);
+          updateStatus.style.cssText = 'text-align:center;margin-top:8px;font-size:11px;padding:8px;background:rgba(0,212,255,0.1);border:1px solid #00d4ff;border-radius:8px';
+          const icon = document.createElement('span');
+          icon.textContent = '🆕 ';
           const link = document.createElement('a');
           link.href = data.html_url;
           link.target = '_blank';
-          link.textContent = `📥 آپدیت جدید موجود: ${latest}`;
-          link.style.cssText = 'color:#00d4ff;text-decoration:underline;cursor:pointer';
+          link.textContent = `آپدیت جدید: ${latest} — کلیک کن`;
+          link.style.cssText = 'color:#00d4ff;text-decoration:underline;cursor:pointer;font-weight:600';
+          updateStatus.appendChild(icon);
           updateStatus.appendChild(link);
-        } else {
-          updateStatus.textContent = '✅ شما آخرین نسخه رو دارید (v' + current + ')';
+        }
+        showStatus(`🆕 آپدیت جدید موجود: ${latest}`, 'warning');
+      } else {
+        if (!silent && updateStatus) {
+          updateStatus.textContent = '✅ آخرین نسخه (v' + current + ')';
           updateStatus.style.color = '#00ff88';
         }
-      } catch (e) {
+      }
+    } catch (e) {
+      if (!silent && updateStatus) {
         updateStatus.textContent = '❌ خطا در بررسی آپدیت';
         updateStatus.style.color = '#ff4444';
       }
-    });
+    }
   }
+
+  if (checkUpdatesBtn) {
+    checkUpdatesBtn.addEventListener('click', () => checkForUpdate(false));
+  }
+  // Auto-check on startup (silent — only shows if update available)
+  checkForUpdate(true);
 
   // ==================== LOAD SAVED ====================
   // Init profiles on startup
