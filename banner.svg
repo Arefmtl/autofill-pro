@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f0f23"/>
+      <stop offset="100%" style="stop-color:#1a1a3e"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#00d4ff"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1280" height="640" fill="url(#bg)"/>
+  
+  <!-- Border -->
+  <rect x="2" y="2" width="1276" height="636" fill="none" stroke="url(#accent)" stroke-width="2" rx="8"/>
+  
+  <!-- Lightning bolt icon -->
+  <g transform="translate(640, 180)" filter="url(#glow)">
+    <polygon points="0,-80 20,-20 -10,-20 10,80 -20,20 10,20" fill="#00d4ff" opacity="0.9"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="640" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="72" font-weight="bold" fill="#ffffff">
+    ⚡ AutoFill Pro
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="640" y="370" text-anchor="middle" font-family="Arial, sans-serif" font-size="28" fill="#888888">
+    Smart Chrome Extension for Job Application Forms
+  </text>
+  
+  <!-- Persian subtitle -->
+  <text x="640" y="410" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" fill="#666666">
+    افزونه هوشمند کروم برای پر کردن خودکار فرم‌ها
+  </text>
+  
+  <!-- Feature boxes -->
+  <!-- Box 1: Resume -->
+  <rect x="100" y="460" width="250" height="120" rx="12" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="1"/>
+  <text x="225" y="500" text-anchor="middle" font-family="Arial, sans-serif" font-size="36">📄</text>
+  <text x="225" y="535" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#00ff88">PDF / DOCX / TXT</text>
+  <text x="225" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#888888">Resume Parsing</text>
+  
+  <!-- Box 2: Auto Fill -->
+  <rect x="380" y="460" width="250" height="120" rx="12" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="1"/>
+  <text x="505" y="500" text-anchor="middle" font-family="Arial, sans-serif" font-size="36">🚀</text>
+  <text x="505" y="535" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#00d4ff">One-Click Fill</text>
+  <text x="505" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#888888">Auto Form Detection</text>
+  
+  <!-- Box 3: Convert -->
+  <rect x="660" y="460" width="250" height="120" rx="12" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="1"/>
+  <text x="785" y="500" text-anchor="middle" font-family="Arial, sans-serif" font-size="36">🔄</text>
+  <text x="785" y="535" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#7c3aed">File Converter</text>
+  <text x="785" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#888888">PDF → JSON/CSV/HTML</text>
+  
+  <!-- Box 4: Multi Language -->
+  <rect x="940" y="460" width="250" height="120" rx="12" fill="#1a1a2e" stroke="#2a2a4a" stroke-width="1"/>
+  <text x="1065" y="500" text-anchor="middle" font-family="Arial, sans-serif" font-size="36">🌐</text>
+  <text x="1065" y="535" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#ffaa00">3 Languages</text>
+  <text x="1065" y="555" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#888888">FA / DE / EN</text>
+  
+  <!-- Bottom accent line -->
+  <rect x="100" y="610" width="1080" height="2" fill="url(#accent)" rx="1"/>
+  
+  <!-- Version badge -->
+  <rect x="560" y="620" width="160" height="24" rx="12" fill="#00d4ff" opacity="0.2"/>
+  <text x="640" y="637" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="#00d4ff">v1.2 • MIT License</text>
+</svg>
