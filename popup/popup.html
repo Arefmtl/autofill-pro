@@ -26,6 +26,8 @@
           ⭐ Star
         </a>
       </div>
+      <!-- Update Banner (global — shows on any tab) -->
+      <div id="updateBanner" style="display:none"></div>
     </div>
 
     <!-- Tab Navigation (reordered: Profile first for apply flow) -->
@@ -38,6 +40,16 @@
 
     <!-- Profile Tab (FIRST = primary use case) -->
     <div class="tab-content active" id="profile">
+      <!-- Empty State (first-time user) -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">👋</div>
+        <h3>سلام! به AutoFill Pro خوش اومدی</h3>
+        <p class="small">برای شروع، یه پروفایل بساز یا رزومه‌ات رو آپلود کن تا خودکار پر بشه</p>
+        <button class="btn btn-primary" id="emptyUploadBtn" style="margin-top:8px">📄 آپلود رزومه</button>
+      </div>
+
+      <!-- Profile Form (hidden until first profile or upload) -->
+      <div id="profileForm" style="display:none">
       <!-- Profile Selector -->
       <div class="profile-selector">
         <div class="profile-selector-row">
@@ -130,6 +142,7 @@
 
       <button class="btn btn-primary" id="saveProfile">💾 ذخیره پروفایل</button>
       <button class="btn btn-success" id="saveAsProfile" style="display:block;margin-top:8px">📋 ذخیره به عنوان پروفایل جدید</button>
+      </div><!-- /profileForm -->
     </div>
 
     <!-- Upload Tab (Upload resume to extract data) -->
@@ -259,8 +272,8 @@
       <span id="statusText">آماده</span>
     </div>
 
-    <!-- Fill Button (sticky at bottom — always visible) -->
-    <button class="btn btn-fill" id="fillBtn" style="display:none">
+    <!-- Fill Button (always visible — sticky at bottom) -->
+    <button class="btn btn-fill" id="fillBtn">
       🚀 پر کردن فرم
     </button>
   </div>

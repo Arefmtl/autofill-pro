@@ -312,6 +312,12 @@ document.addEventListener('DOMContentLoaded', () => {
       showStatus(`${fieldCount} فیلد استخراج شد! → پرشون تب پروفایل`, 'success');
       fillBtn.style.display = 'block';
 
+      // Hide empty state, show profile form
+      const emptyState = document.getElementById('emptyState');
+      const profileForm = document.getElementById('profileForm');
+      if (emptyState) emptyState.style.display = 'none';
+      if (profileForm) profileForm.style.display = 'block';
+
       // Auto-switch to profile tab
       const profileTab = document.querySelector('[data-tab="profile"]');
       if (profileTab) profileTab.click();
@@ -548,16 +554,32 @@ document.addEventListener('DOMContentLoaded', () => {
     showStatus(i18n[uiLanguage].saved, 'success');
   });
 
-  // Save as new profile
+  // Save as new profile (inline input — no prompt())
   document.getElementById('saveAsProfile').addEventListener('click', () => {
-    const name = prompt(i18n[uiLanguage].namePrompt, `Profile ${Object.keys(profiles).length + 1}`);
-    if (!name) return;
-    const id = generateId();
-    profiles[id] = { name, data: collectProfileData(), language: document.getElementById('resumeLanguage').value };
-    currentProfileId = id;
-    refreshProfileSelect();
-    saveProfiles();
-    showStatus(i18n[uiLanguage].savedAs, 'success');
+    // Reuse the profile name edit input
+    const editDiv = document.getElementById('profileNameEdit');
+    const nameInput = document.getElementById('profileName');
+    editDiv.style.display = 'flex';
+    nameInput.value = `Profile ${Object.keys(profiles).length + 1}`;
+    nameInput.focus();
+    nameInput.select();
+
+    // Temporarily override the confirm button
+    const confirmBtn = document.getElementById('confirmProfileName');
+    const originalHandler = confirmBtn.onclick;
+    confirmBtn.onclick = null;
+    confirmBtn.addEventListener('click', function saveAsHandler() {
+      const name = nameInput.value.trim();
+      if (!name) { nameInput.focus(); return; }
+      const id = generateId();
+      profiles[id] = { name, data: collectProfileData(), language: document.getElementById('resumeLanguage').value };
+      currentProfileId = id;
+      editDiv.style.display = 'none';
+      refreshProfileSelect();
+      saveProfiles();
+      showStatus(i18n[uiLanguage].savedAs, 'success');
+      confirmBtn.removeEventListener('click', saveAsHandler);
+    }, { once: true });
   });
 
   // Language change
@@ -732,9 +754,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // ==================== AUTO UPDATE CHECK ====================
   const checkUpdatesBtn = document.getElementById('checkUpdates');
   const updateStatus = document.getElementById('updateStatus');
+  const updateBanner = document.getElementById('updateBanner');
 
   async function checkForUpdate(silent = false) {
-    if (updateStatus) updateStatus.textContent = '⏳ در حال بررسی...';
     try {
       const resp = await fetch('https://api.github.com/repos/Arefmtl/autofill-pro/releases/latest');
       const data = await resp.json();
@@ -744,20 +766,26 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentNum = parseFloat(current);
 
       if (latestNum > currentNum) {
+        // Show GLOBAL banner (on all tabs)
+        if (updateBanner) {
+          updateBanner.style.cssText = 'display:flex;align-items:center;gap:8px;margin-top:8px;padding:8px 12px;background:linear-gradient(135deg,rgba(0,212,255,0.15),rgba(124,58,237,0.15));border:1px solid #00d4ff;border-radius:8px;font-size:11px;cursor:pointer;text-decoration:none;color:#00d4ff';
+          updateBanner.textContent = '';
+          const icon = document.createElement('span');
+          icon.textContent = '🆕';
+          const text = document.createElement('span');
+          text.textContent = `آپدیت جدید: ${latest} — کلیک کن`;
+          text.style.flex = '1';
+          updateBanner.appendChild(icon);
+          updateBanner.appendChild(text);
+          updateBanner.addEventListener('click', () => {
+            chrome.tabs.create({ url: data.html_url });
+          });
+        }
         if (updateStatus) {
           while (updateStatus.firstChild) updateStatus.removeChild(updateStatus.firstChild);
-          updateStatus.style.cssText = 'text-align:center;margin-top:8px;font-size:11px;padding:8px;background:rgba(0,212,255,0.1);border:1px solid #00d4ff;border-radius:8px';
-          const icon = document.createElement('span');
-          icon.textContent = '🆕 ';
-          const link = document.createElement('a');
-          link.href = data.html_url;
-          link.target = '_blank';
-          link.textContent = `آپدیت جدید: ${latest} — کلیک کن`;
-          link.style.cssText = 'color:#00d4ff;text-decoration:underline;cursor:pointer;font-weight:600';
-          updateStatus.appendChild(icon);
-          updateStatus.appendChild(link);
+          updateStatus.textContent = `🆕 آپدیت جدید: ${latest}`;
+          updateStatus.style.color = '#00d4ff';
         }
-        showStatus(`🆕 آپدیت جدید موجود: ${latest}`, 'warning');
       } else {
         if (!silent && updateStatus) {
           updateStatus.textContent = '✅ آخرین نسخه (v' + current + ')';
@@ -785,6 +813,36 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshProfileSelect();
     loadProfileToForm();
     applyLanguage();
+
+    // Empty state vs profile form
+    const emptyState = document.getElementById('emptyState');
+    const profileForm = document.getElementById('profileForm');
+    const fillBtn = document.getElementById('fillBtn');
+
+    function checkEmptyState() {
+      const hasData = Object.keys(profiles).length > 0 &&
+        profiles[currentProfileId] &&
+        Object.values(profiles[currentProfileId].data).some(v => v && v.length > 0);
+      if (hasData) {
+        if (emptyState) emptyState.style.display = 'none';
+        if (profileForm) profileForm.style.display = 'block';
+        if (fillBtn) fillBtn.style.display = 'block';
+      } else {
+        if (emptyState) emptyState.style.display = 'block';
+        if (profileForm) profileForm.style.display = 'none';
+        if (fillBtn) fillBtn.style.display = 'block'; // still show — user can fill with partial data
+      }
+    }
+    checkEmptyState();
+
+    // Empty state upload button
+    const emptyUploadBtn = document.getElementById('emptyUploadBtn');
+    if (emptyUploadBtn) {
+      emptyUploadBtn.addEventListener('click', () => {
+        const uploadTab = document.querySelector('[data-tab="upload"]');
+        if (uploadTab) uploadTab.click();
+      });
+    }
 
     chrome.storage.local.get(['settings', 'resumeData'], async (result) => {
       if (result.settings) {
