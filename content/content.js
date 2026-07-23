@@ -1,552 +1,383 @@
-// AutoFill Pro v2.0 - Lightning-Inspired Form Filling
+// AutoFill Pro v3.0 — JobWizard Clone
 (() => {
   'use strict';
 
-  // ==================== CONFIG ====================
   const AI_ENDPOINT = 'https://api.opencode.ai/v1/chat/completions';
   const AI_MODEL = 'mimo-2.5';
 
+  // ==================== ATS DETECTION ====================
+  const ATS_REGISTRY = {
+    greenhouse: {
+      domain: ['greenhouse.io', 'grnh.se'],
+      selectors: ['form.application', '[class*="application_form"]', '#application_form'],
+      fieldMap: { 'first_name': 'firstName', 'last_name': 'lastName', 'email': 'email', 'phone': 'phone', 'resume_text': 'summary', 'cover_letter_text': 'coverLetter' }
+    },
+    lever: {
+      domain: ['lever.co'],
+      selectors: ['form#application-form', '.posting-apply'],
+      fieldMap: { 'name': 'fullName', 'email': 'email', 'phone': 'phone' }
+    },
+    workday: {
+      domain: ['myworkdayjobs.com', 'workday.com'],
+      selectors: ['[class*="WD"]', 'form[action*="workday"]'],
+      fieldMap: { 'fullName': 'fullName', 'email': 'email', 'phone': 'phone', 'address': 'address' }
+    },
+    ashby: {
+      domain: ['ashbyhq.com', 'jobs.ashbyhq.com'],
+      selectors: ['[class*="ashby"]', 'form[class*="application"]'],
+      fieldMap: { 'name': 'fullName', 'email': 'email', 'phone': 'phone' }
+    },
+    linkedin: {
+      domain: ['linkedin.com'],
+      selectors: ['form.jobs-easy-apply-form', '[data-job-id]'],
+      fieldMap: { 'first-name': 'firstName', 'last-name': 'lastName', 'email': 'email', 'phone': 'phone' }
+    },
+    smartrecruiters: {
+      domain: ['smartrecruiters.com', 'jobs.smartrecruiters.com'],
+      selectors: ['.apply-form', '[class*="apply-form"]'],
+      fieldMap: { 'name': 'fullName', 'email': 'email', 'phone': 'phone' }
+    },
+    bamboohr: {
+      domain: ['bamboohr.com', 'jobs.bamboohr.com'],
+      selectors: ['form#application', '.sticky-apply-form'],
+      fieldMap: { 'firstName': 'firstName', 'lastName': 'lastName', 'email': 'email', 'phone': 'phone' }
+    }
+  };
+
+  function detectATS() {
+    const hostname = window.location.hostname.toLowerCase();
+    for (const [name, cfg] of Object.entries(ATS_REGISTRY)) {
+      if (cfg.domain.some(d => hostname.includes(d))) return { name, ...cfg };
+    }
+    // Generic ATS detection by DOM
+    if (document.querySelector('form.application') || document.querySelector('[data-automation="job-application"]')) return { name: 'generic', selectors: ['form.application'], fieldMap: {} };
+    if (document.querySelector('.job-application-form') || document.querySelector('[class*="apply-form"]')) return { name: 'generic', selectors: ['.job-application-form'], fieldMap: {} };
+    return null;
+  }
+
   // ==================== EXPANDED FIELD MAP ====================
-  // Inspired by Lightning Autofill — match on multiple attributes
   const FIELD_MAP = {
-    // Name
-    'نام': 'fullName', 'نام کامل': 'fullName', 'full name': 'fullName',
-    'fullname': 'fullName', 'first name': 'firstName', 'last name': 'lastName',
-    'vorname': 'firstName', 'nachname': 'lastName', 'name': 'fullName',
-    'firstName': 'firstName', 'lastName': 'lastName', 'familyName': 'lastName',
-    'firstname': 'firstName', 'lastname': 'lastName', 'surname': 'lastName',
-    // Email
-    'ایمیل': 'email', 'email': 'email', 'e-mail': 'email', 'mail': 'email',
-    'emailaddress': 'email',
-    // Phone
-    'تلفن': 'phone', 'شماره تلفن': 'phone', 'phone': 'phone', 'tel': 'phone',
-    'telephone': 'phone', 'mobile': 'phone', 'handy': 'phone', 'telefon': 'phone',
-    'phonenumber': 'phone', 'mobilenumber': 'phone', 'cellphone': 'phone',
-    // Address
-    'آدرس': 'address', 'address': 'address', 'adresse': 'address',
-    'street': 'address', 'strasse': 'address', 'straße': 'address',
-    'stadt': 'city', 'city': 'city', 'land': 'country', 'country': 'country',
-    'plz': 'zipCode', 'zip': 'zipCode', 'postalcode': 'zipCode', 'postleitzahl': 'zipCode',
-    // Social
-    'لینکدین': 'linkedin', 'linkedin': 'linkedin',
-    'گیت‌هاب': 'github', 'github': 'github',
-    'وب‌سایت': 'website', 'website': 'website', 'webseite': 'website', 'homepage': 'website',
-    'url': 'website', 'portfolio': 'website',
-    // Sections
-    'درباره من': 'summary', 'summary': 'summary', 'about': 'summary', 'über mich': 'summary',
-    'objective': 'summary', 'coverletter': 'summary', 'cover letter': 'summary',
-    'مهارت‌ها': 'skills', 'skills': 'skills', 'fähigkeiten': 'skills',
-    'technologies': 'skills', 'tech stack': 'skills',
-    'تجربه': 'experience', 'experience': 'experience', 'berufserfahrung': 'experience',
-    'work history': 'experience', 'employment': 'experience',
-    'تحصیلات': 'education', 'education': 'education', 'bildung': 'education',
-    'academic': 'education', 'qualification': 'education',
-    // Extra
-    'تاریخ تولد': 'dateOfBirth', 'date of birth': 'dateOfBirth', 'dob': 'dateOfBirth',
-    'geburtstag': 'dateOfBirth', 'birthday': 'dateOfBirth',
-    'ملیت': 'nationality', 'nationality': 'nationality',
-    'ویزا': 'visaStatus', 'work permit': 'visaStatus', 'visa status': 'visaStatus',
-    'aufenthaltstitel': 'visaStatus', 'arbeitserlaubnis': 'visaStatus',
-    // Autocomplete attribute values (used by Chrome/browser autofill)
-    'given-name': 'firstName', 'family-name': 'lastName', 'additional-name': 'fullName',
-    'email': 'email', 'tel': 'phone', 'tel-national': 'phone',
-    'street-address': 'address', 'address-line1': 'address',
-    'address-level2': 'city', 'address-level1': 'country',
-    'postal-code': 'zipCode', 'country-name': 'country',
-    'organization': 'experience', 'organization-title': 'experience',
+    'نام': 'fullName', 'نام کامل': 'fullName', 'full name': 'fullName', 'fullname': 'fullName',
+    'first name': 'firstName', 'last name': 'lastName', 'vorname': 'firstName', 'nachname': 'lastName',
+    'surname': 'lastName', 'firstName': 'firstName', 'lastName': 'lastName', 'name': 'fullName',
+    'ایمیل': 'email', 'email': 'email', 'e-mail': 'email', 'mail': 'email', 'emailaddress': 'email',
+    'تلفن': 'phone', 'phone': 'phone', 'tel': 'phone', 'telephone': 'phone', 'mobile': 'phone',
+    'handy': 'phone', 'telefon': 'phone', 'phonenumber': 'phone', 'cellphone': 'phone',
+    'آدرس': 'address', 'address': 'address', 'adresse': 'address', 'street': 'address',
+    'stadt': 'city', 'city': 'city', 'country': 'country', 'land': 'country',
+    'plz': 'zipCode', 'zip': 'zipCode', 'postalcode': 'zipCode',
+    'لینکدین': 'linkedin', 'linkedin': 'linkedin', 'گیت‌هاب': 'github', 'github': 'github',
+    'وب‌سایت': 'website', 'website': 'website', 'webseite': 'website',
+    'skills': 'skills', 'مهارت': 'skills', 'experience': 'experience', 'تجربه': 'experience',
+    'education': 'education', 'تحصیلات': 'education',
+    'nationality': 'nationality', 'ملیت': 'nationality', 'visa': 'visaStatus', 'ویزا': 'visaStatus',
+    'gender': 'gender', 'years of experience': 'yearsOfExperience', 'notice period': 'noticePeriod',
+    'expected salary': 'salary', 'current salary': 'salary', 'salary expectation': 'salary',
+    'github': 'github', 'portfolio': 'portfolio', 'website url': 'website',
+    'title': 'currentTitle', 'job title': 'currentTitle', 'cover letter': 'coverLetter',
+    'given-name': 'firstName', 'family-name': 'lastName', 'email': 'email', 'tel': 'phone',
+    'street-address': 'address', 'postal-code': 'zipCode', 'organization': 'company',
+    'organization-title': 'currentTitle', 'address-level2': 'city', 'address-level1': 'country',
   };
 
   // ==================== RATE LIMITING ====================
   let lastAICall = 0;
   const AI_COOLDOWN = 5000;
-  function canCallAI() {
-    const now = Date.now();
-    if (now - lastAICall < AI_COOLDOWN) return false;
-    lastAICall = now;
-    return true;
-  }
+  function canCallAI() { const now = Date.now(); if (now - lastAICall < AI_COOLDOWN) return false; lastAICall = now; return true; }
 
   // ==================== STORAGE ====================
   async function getProfile() {
-    return new Promise(resolve => {
-      chrome.storage.local.get(['profile', 'resumeData'], r => {
-        const data = { ...(r.resumeData || {}), ...(r.profile || {}) };
-        // Combine firstName + lastName for backward compat
-        if (!data.fullName && (data.firstName || data.lastName)) {
-          data.fullName = [data.firstName, data.lastName].filter(Boolean).join(' ');
-        }
-        resolve(data);
-      });
-    });
+    return new Promise(resolve => chrome.storage.local.get(['profile', 'resumeData'], r => resolve({ ...(r.resumeData || {}), ...(r.profile || {}), fullName: r.profile?.fullName || r.resumeData?.fullName || [r.profile?.firstName, r.profile?.lastName].filter(Boolean).join(' ') })));
   }
-
   async function getApiKey() {
-    if (window.SecureStorage) {
-      const key = await window.SecureStorage.get('apiKey');
-      if (key) return key;
-    }
-    return new Promise(resolve => {
-      chrome.storage.local.get('settings', r => {
-        resolve(r.settings?.apiKey || '');
-      });
-    });
+    if (window.SecureStorage) { const k = await window.SecureStorage.get('apiKey'); if (k) return k; }
+    return new Promise(resolve => chrome.storage.local.get('settings', r => resolve(r.settings?.apiKey || '')));
   }
 
-  // ==================== TEXT EXTRACTION ====================
-  async function extractText(file) {
-    const ext = file.name.split('.').pop().toLowerCase();
-    if (ext === 'txt') return await file.text();
-    if (ext === 'pdf') return await extractPDF(file);
-    if (ext === 'docx') return await extractDOCX(file);
-    return await file.text();
-  }
-
-  async function extractPDF(file) {
-    try {
-      const lib = await loadPDFJS();
-      const buf = await file.arrayBuffer();
-      const pdf = await lib.getDocument({ data: buf }).promise;
-      let text = '';
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        text += content.items.map(item => item.str).join(' ') + '\n\n';
-      }
-      return text.trim();
-    } catch (e) {
-      try {
-        const buf = await file.arrayBuffer();
-        const u8 = new Uint8Array(buf);
-        let t = '';
-        for (let i = 0; i < u8.length; i++) {
-          if (u8[i] >= 32 && u8[i] <= 126) t += String.fromCharCode(u8[i]);
-        }
-        return t;
-      } catch { return ''; }
-    }
-  }
-
-  async function loadPDFJS() {
-    if (window.pdfjsLib) return window.pdfjsLib;
-    return new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = chrome.runtime.getURL('lib/pdf.min.mjs');
-      s.type = 'module';
-      s.onload = async () => {
-        try {
-          const mod = await import(chrome.runtime.getURL('lib/pdf.min.mjs'));
-          window.pdfjsLib = mod;
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL('lib/pdf.worker.min.mjs');
-          resolve(window.pdfjsLib);
-        } catch (e) { reject(e); }
-      };
-      s.onerror = () => reject(new Error('PDF.js load failed'));
-      document.head.appendChild(s);
-    });
-  }
-
-  async function extractDOCX(file) {
-    try {
-      const zip = await (await loadJSZip()).loadAsync(file);
-      const xml = await zip.file('word/document.xml').async('text');
-      const matches = xml.match(/<w:t[^>]*>([^<]+)<\/w:t>/g);
-      return matches ? matches.map(m => m.replace(/<[^>]+>/g, '')).join(' ') : xml;
-    } catch (e) { return await file.text(); }
-  }
-
-  async function loadJSZip() {
-    if (window.JSZip) return window.JSZip;
-    return new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = chrome.runtime.getURL('lib/jszip.min.js');
-      s.onload = () => resolve(window.JSZip);
-      s.onerror = () => reject(new Error('JSZip load failed'));
-      document.head.appendChild(s);
-    });
-  }
-
-  // ==================== REGEX PARSER ====================
-  function parseWithRegex(text) {
-    const data = {
-      firstName: '', lastName: '', fullName: '', email: '', phone: '',
-      address: '', city: '', country: '', zipCode: '',
-      linkedin: '', github: '', website: '', summary: '',
-      skills: '', experience: '', education: '',
-      dateOfBirth: '', nationality: '', visaStatus: ''
-    };
-    if (!text || text.length < 10) return data;
-
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
-    const em = text.match(/[\w.+-]+@[\w.-]+\.\w{2,}/);
-    if (em) data.email = em[0];
-
-    const phonePatterns = [
-      /[\+]\d{1,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}[\s\-]?\d{0,4}/,
-      /0\d{2,4}[\s\-]?\d{3,4}[\s\-]?\d{3,4}/,
-      /\(\d{3,4}\)[\s\-]?\d{3,4}[\s\-]?\d{3,4}/
-    ];
-    for (const pat of phonePatterns) {
-      const m = text.match(pat);
-      if (m && m[0].replace(/\D/g, '').length >= 8) { data.phone = m[0].trim(); break; }
-    }
-
-    const li = text.match(/(?:https?:\/\/)?(?:www\.)?linkedin\.com\/in\/[\w\-]+\/?/i);
-    if (li) data.linkedin = li[0].startsWith('http') ? li[0] : 'https://' + li[0];
-
-    const gh = text.match(/(?:https?:\/\/)?(?:www\.)?github\.com\/[\w\-]+\/?/i);
-    if (gh) data.github = gh[0].startsWith('http') ? gh[0] : 'https://' + gh[0];
-
-    const wm = text.match(/(?:https?:\/\/)?(?:www\.)?[\w\-]+\.\w{2,}(?:\/\S*)?/g);
-    if (wm) {
-      const site = wm.find(s => !s.includes('linkedin') && !s.includes('github') && !s.includes('@'));
-      if (site) data.website = site.startsWith('http') ? site : 'https://' + site;
-    }
-
-    // Name detection
-    const skipHeaders = ['experience', 'education', 'skills', 'summary', 'about', 'contact',
-      'profile', 'work', 'projects', 'تجربه', 'تحصیلات', 'مهارت', 'درباره', 'تماس'];
-    for (const line of lines) {
-      const lower = line.toLowerCase();
-      if (skipHeaders.some(h => lower.includes(h))) continue;
-      if (lower.includes('@') || lower.includes('http') || lower.includes('www')) continue;
-      if (line.length < 2 || line.length > 60 || /\d{3,}/.test(line)) continue;
-      const words = line.split(/\s+/);
-      if (words.length >= 2 && words.length <= 5) {
-        if (/^[A-Za-zÀ-ÿ\s\-\.]+$/.test(line) || /^[\u0600-\u06FF\s]+$/.test(line)) {
-          data.fullName = line;
-          data.firstName = words[0];
-          data.lastName = words.slice(1).join(' ');
-          break;
-        }
-      }
-    }
-
-    const full = lines.join('\n');
-    const sec = (pattern) => {
-      const m = full.match(pattern);
-      return m ? m[1].replace(/\n{3,}/g, '\n\n').replace(/^\s*[\-\*•]\s*/gm, '').trim().substring(0, 1000) : '';
-    };
-    data.skills = sec(/(?:skills?|مهارت|capabilities|technologies|fähigkeiten)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|work|education|projects|summary|about|contact|تجربه|تحصیلات|پروژه|درباره)|\n\n\n|$)/i);
-    data.experience = sec(/(?:experience|work history|سابقه کاری|تجربه کاری|berufserfahrung)[:\s]*\n?([\s\S]*?)(?=\n(?:education|skills|projects|summary|about|contact|certifications|تحصیلات|مهارت|پروژه|درباره)|\n\n\n|$)/i);
-    data.education = sec(/(?:education|degree|تحصیلات|bildung|ausbildung|studium)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|skills|projects|summary|about|contact|certifications|تجربه|مهارت|پروژه|درباره)|\n\n\n|$)/i);
-    data.summary = sec(/(?:about me|summary|profile|objective|درباره من|über mich|profil)[:\s]*\n?([\s\S]*?)(?=\n(?:experience|education|skills|work|contact|تجربه|تحصیلات|مهارت|تماس)|\n\n\n|$)/i);
-
-    const addr = full.match(/(?:address|location|stadt|ort|wohnort|آدرس)[:\s]*([^\n]+)/i);
-    if (addr) data.address = addr[1].trim();
-    else {
-      const cities = ['Berlin', 'München', 'Hamburg', 'Frankfurt', 'Köln', 'Stuttgart',
-        'Düsseldorf', 'Leipzig', 'Dresden', 'Hannover', 'Wien', 'Zürich', 'Bern',
-        'Amsterdam', 'London', 'Paris', 'Tehran', 'Isfahan', 'Shiraz', 'Tabriz'];
-      for (const c of cities) {
-        if (full.match(new RegExp(c, 'i'))) { data.address = c; data.city = c; break; }
-      }
-    }
-
-    const dob = full.match(/(?:date of birth|dob|geburtstag|تاریخ تولد|تولد|born)[:\s]*(\d{1,2}[\/\.\-]\d{1,2}[\/\.\-]\d{2,4}|\d{4}[\/\.\-]\d{1,2}[\/\.\-]\d{1,2})/i);
-    if (dob) data.dateOfBirth = dob[1];
-
-    const nat = full.match(/(?:nationality|staatsangehörigkeit|ملیت)[:\s]*([^\n]+)/i);
-    if (nat) data.nationality = nat[1].trim();
-
-    const visa = full.match(/(?:visa|work permit|aufenthaltstitel|arbeitserlaubnis|ویزا|اقامت)[:\s]*([^\n]+)/i);
-    if (visa) data.visaStatus = visa[1].trim();
-
-    return data;
-  }
-
-  // ==================== AI PARSER ====================
-  async function parseWithAI(text, apiKey) {
-    if (!apiKey || !canCallAI()) return null;
-
-    const prompt = `Extract structured data from this resume. Return ONLY a JSON object:
-{"firstName":"","lastName":"","email":"","phone":"","address":"","city":"","country":"","zipCode":"","linkedin":"","github":"","website":"","summary":"","skills":"","experience":"","education":"","dateOfBirth":"","nationality":"","visaStatus":""}
-
-Resume text:
----
-${text.substring(0, 4000)}
----
-
-Return ONLY the JSON.`;
-
-    try {
-      const response = await fetch(AI_ENDPOINT, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
-        body: JSON.stringify({ model: AI_MODEL, messages: [{ role: 'user', content: prompt }], temperature: 0.1, max_tokens: 1000 })
-      });
-      if (!response.ok) return null;
-      const data = await response.json();
-      const content = data.choices[0]?.message?.content || '';
-      const jsonMatch = content.match(/\{[\s\S]*\}/);
-      if (jsonMatch) return JSON.parse(jsonMatch[0]);
-    } catch (err) { /* silent */ }
-    return null;
-  }
-
-  async function parseResume(text) {
+  // ==================== AI CALL ====================
+  async function callAI(prompt, maxTokens = 500) {
     const apiKey = await getApiKey();
-    if (apiKey) {
-      const aiResult = await parseWithAI(text, apiKey);
-      if (aiResult && (aiResult.fullName || aiResult.firstName || aiResult.email)) return aiResult;
-    }
-    return parseWithRegex(text);
+    if (!apiKey || !canCallAI()) return null;
+    try {
+      const resp = await fetch(AI_ENDPOINT, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` }, body: JSON.stringify({ model: AI_MODEL, messages: [{ role: 'user', content: prompt }], temperature: 0.3, max_tokens: maxTokens }) });
+      if (!resp.ok) return null;
+      const d = await resp.json();
+      return d.choices[0]?.message?.content || null;
+    } catch { return null; }
   }
 
-  // ==================== FIELD MATCHING (Lightning-inspired) ====================
-  // Priority: autocomplete > aria-label > label text > name/id/placeholder
-
+  // ==================== FIELD MATCHING ====================
   function matchField(field) {
-    // 1. Check autocomplete attribute first (most reliable)
-    if (field.autocomplete) {
-      const ac = field.autocomplete.toLowerCase();
-      if (ac !== 'on' && ac !== 'off') {
-        for (const [pattern, key] of Object.entries(FIELD_MAP)) {
-          if (ac === pattern.toLowerCase() || ac.includes(pattern.toLowerCase())) return key;
-        }
-      }
-    }
-
-    // 2. Check aria-label
-    if (field.getAttribute('aria-label')) {
-      const al = field.getAttribute('aria-label').toLowerCase();
-      for (const [pattern, key] of Object.entries(FIELD_MAP)) {
-        if (al.includes(pattern.toLowerCase())) return key;
-      }
-    }
-
-    // 3. Check aria-labelledby
-    if (field.getAttribute('aria-labelledby')) {
-      const lbId = field.getAttribute('aria-labelledby');
-      const lbEl = document.getElementById(lbId);
-      if (lbEl) {
-        const lbText = lbEl.textContent.toLowerCase();
-        for (const [pattern, key] of Object.entries(FIELD_MAP)) {
-          if (lbText.includes(pattern.toLowerCase())) return key;
-        }
-      }
-    }
-
-    // 4. Check associated label text
-    const label = getFieldLabel(field);
-    if (label) {
-      const lower = label.toLowerCase().trim();
-      for (const [pattern, key] of Object.entries(FIELD_MAP)) {
-        if (lower.includes(pattern.toLowerCase())) return key;
-      }
-    }
-
-    // 5. Check name, id, placeholder, title, data-bind
-    const attrs = [
-      field.name, field.id, field.placeholder, field.title,
-      field.getAttribute('data-bind'), field.getAttribute('data-reactid'),
-      field.getAttribute('ng-model')
-    ].map(a => (a || '').toLowerCase()).join(' ');
-
-    for (const [pattern, key] of Object.entries(FIELD_MAP)) {
-      if (attrs.includes(pattern.toLowerCase())) return key;
-    }
-
-    // 6. CSS selector fallback — try class match
-    if (field.className) {
-      const cls = field.className.toLowerCase();
-      for (const [pattern, key] of Object.entries(FIELD_MAP)) {
-        if (cls.includes(pattern.toLowerCase())) return key;
-      }
-    }
-
+    const ac = (field.autocomplete || '').toLowerCase();
+    if (ac && ac !== 'on' && ac !== 'off') { for (const [p, k] of Object.entries(FIELD_MAP)) if (ac === p || ac.includes(p)) return k; }
+    const al = (field.getAttribute('aria-label') || '').toLowerCase();
+    for (const [p, k] of Object.entries(FIELD_MAP)) if (al.includes(p)) return k;
+    const lbl = field.getAttribute('aria-labelledby');
+    if (lbl) { const el = document.getElementById(lbl); if (el) { const t = el.textContent.toLowerCase(); for (const [p, k] of Object.entries(FIELD_MAP)) if (t.includes(p)) return k; } }
+    const label = labelFor(field);
+    if (label) { const l = label.toLowerCase(); for (const [p, k] of Object.entries(FIELD_MAP)) if (l.includes(p)) return k; }
+    const attrs = [field.name, field.id, field.placeholder, field.title, field.getAttribute('data-bind'), field.getAttribute('ng-model')].map(a => (a || '').toLowerCase()).join(' ');
+    for (const [p, k] of Object.entries(FIELD_MAP)) if (attrs.includes(p)) return k;
     return null;
   }
-
-  function getFieldLabel(field) {
-    if (field.id) {
-      const label = document.querySelector(`label[for="${field.id}"]`);
-      if (label) return label.textContent;
-    }
-    const parentLabel = field.closest('label');
-    if (parentLabel) {
-      const clone = parentLabel.cloneNode(true);
-      clone.querySelectorAll('input, textarea, select').forEach(el => el.remove());
-      return clone.textContent;
-    }
-    const prev = field.previousElementSibling;
-    if (prev && ['LABEL', 'SPAN', 'DIV'].includes(prev.tagName)) return prev.textContent;
-    const parent = field.parentElement;
-    if (parent) {
-      const texts = Array.from(parent.childNodes)
-        .filter(n => n.nodeType === Node.TEXT_NODE)
-        .map(n => n.textContent.trim()).filter(t => t.length > 0);
-      if (texts.length > 0) return texts[0];
-    }
+  function labelFor(field) {
+    if (field.id) { const l = document.querySelector(`label[for="${field.id}"]`); if (l) return l.textContent; }
+    const pl = field.closest('label'); if (pl) { const c = pl.cloneNode(true); c.querySelectorAll('input, textarea, select').forEach(el => el.remove()); return c.textContent; }
+    const prev = field.previousElementSibling; if (prev && ['LABEL', 'SPAN', 'DIV'].includes(prev.tagName)) return prev.textContent;
     return field.placeholder || field.name || field.id || '';
   }
 
   // ==================== FIELD FILLING ====================
-  function fillInputField(field, value) {
-    if (!field || !value) return false;
-    if (field.value && field.value.trim() !== '') return false;
-
-    field.focus();
-    field.dispatchEvent(new Event('focus', { bubbles: true }));
-
-    const setter = Object.getOwnPropertyDescriptor(
-      field.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value'
-    )?.set;
-
-    if (setter) setter.call(field, value);
-    else field.value = value;
-
-    field.dispatchEvent(new Event('input', { bubbles: true }));
-    field.dispatchEvent(new Event('change', { bubbles: true }));
-    field.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+  function fillInput(f, v) {
+    if (!f || !v || f.type === 'hidden') return false;
+    if (f.value && f.value.trim() !== '') return false;
+    f.focus(); f.dispatchEvent(new Event('focus', { bubbles: true }));
+    const setter = Object.getOwnPropertyDescriptor(f.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value')?.set;
+    if (setter) setter.call(f, v); else f.value = v;
+    f.dispatchEvent(new Event('input', { bubbles: true })); f.dispatchEvent(new Event('change', { bubbles: true }));
+    return true;
+  }
+  function fillSelect(s, v) {
+    if (!s || !v) return false;
+    if (s.value && s.value.trim() !== '') return false;
+    const opts = Array.from(s.options);
+    let m = opts.find(o => o.text.trim().toLowerCase() === v.toString().trim().toLowerCase());
+    if (!m) m = opts.find(o => o.text.toLowerCase().includes(v.toString().toLowerCase()));
+    if (!m) m = opts.find(o => o.value.toLowerCase() === v.toString().toLowerCase());
+    if (m) { s.value = m.value; s.dispatchEvent(new Event('change', { bubbles: true })); return true; }
+    return false;
+  }
+  function fillCheckbox(f, v) {
+    if (!f) return false;
+    const check = ['yes', 'true', '1', 'on', 'checked'].includes(String(v).toLowerCase().trim());
+    if (f.checked !== check) { f.click(); f.dispatchEvent(new Event('change', { bubbles: true })); }
     return true;
   }
 
-  // NEW: Fill <select> dropdown
-  function fillSelectField(select, value) {
-    if (!select || !value) return false;
-    if (select.value && select.value.trim() !== '') return false;
-
-    const options = Array.from(select.options);
-    // Try exact text match
-    let matched = options.find(o => o.text.trim().toLowerCase() === value.trim().toLowerCase());
-    // Try partial text match
-    if (!matched) matched = options.find(o => o.text.toLowerCase().includes(value.toLowerCase()));
-    // Try value attribute match
-    if (!matched) matched = options.find(o => o.value.toLowerCase() === value.toLowerCase());
-
-    if (matched) {
-      select.focus();
-      select.value = matched.value;
-      select.dispatchEvent(new Event('change', { bubbles: true }));
-      select.dispatchEvent(new Event('input', { bubbles: true }));
-      return true;
-    }
-    return false;
+  // ==================== CUSTOM QUESTIONS ====================
+  async function answerCustomQuestion(question, profile) {
+    const prompt = `Job application question: "${question}".\nCandidate profile: ${JSON.stringify(profile)}\nAnswer in 1-3 sentences. Direct answer only.`;
+    return await callAI(prompt, 200);
   }
 
-  // NEW: Fill checkbox/radio
-  function fillCheckboxRadio(field, value) {
-    if (!field || !value) return false;
-    const shouldCheck = ['yes', 'true', '1', 'on', 'checked', 'بله', 'بلی'].includes(value.toString().toLowerCase().trim());
-    if (field.type === 'checkbox') {
-      if (field.checked !== shouldCheck) {
-        field.click();
-        field.dispatchEvent(new Event('change', { bubbles: true }));
+  function detectCustomQuestions() {
+    const questions = [];
+    // Look for question-like elements: "Describe your experience with..."
+    document.querySelectorAll('label, h4, h5, .question, .form-label').forEach(el => {
+      const text = el.textContent.trim();
+      if (!text) return;
+      const keywords = ['describe', 'explain', 'tell us', 'why do you want', 'what is your', 'how would you', 'provide an example', ' درباره', 'توضیح', 'شرح'];
+      if (keywords.some(k => text.toLowerCase().includes(k))) {
+        const field = el.nextElementSibling || el.parentElement?.querySelector('textarea, input[type="text"]');
+        if (field && (field.tagName === 'TEXTAREA' || field.type === 'text') && !field.value.trim()) {
+          questions.push({ text, field });
+        }
       }
-      return true;
+    });
+    return questions;
+  }
+
+  // ==================== JD SUMMARIZER ====================
+  function extractJDText() {
+    // Try common JD containers
+    const selectors = [
+      '.job-description', '.job-details', '[class*="description"]',
+      '#job-description', '.posting-content', '.job-body',
+      '[data-automation="job-description"]', '.jobs-description-content',
+      '.description', '.job-posting-summary', '.jd-content'
+    ];
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el && el.textContent.trim().length > 100) return el.textContent.trim().substring(0, 5000);
     }
-    if (field.type === 'radio' && shouldCheck) {
-      field.click();
-      field.dispatchEvent(new Event('change', { bubbles: true }));
-      return true;
+    // Fallback: biggest text block on page
+    const blocks = document.querySelectorAll('div, section, article');
+    let max = '';
+    for (const b of blocks) {
+      const t = b.textContent.trim();
+      if (t.length > max.length && t.length < 10000) {
+        const hasJobKeywords = /requirements|qualifications|responsibilities|about the role|what you'll do/i.test(t);
+        if (hasJobKeywords) max = t;
+      }
     }
-    return false;
+    return max.substring(0, 5000);
+  }
+  async function summarizeJD(jdText) {
+    return await callAI(`Summarize this job description. Return JSON:
+{"oneLiner":"1-sentence pitch","requirements":"3-5 bullet points","culture":"1-2 sentences about company culture","techStack":"comma-separated","salaryRange":"if mentioned"}
+
+JD:
+${jdText}
+
+Return ONLY JSON.`, 500);
+  }
+
+  // ==================== MATCH SCORE ====================
+  async function calculateMatchScore(profile, jdText) {
+    return await callAI(`Compare candidate profile to job description. Return ONLY JSON:
+{"score":85,"strengths":["Good match on ML skills","5yr experience"],"gaps":["No AWS listed","Missing German C1"],"recommendations":["Add AWS cert","Mention German"]}
+
+Profile: ${JSON.stringify(profile)}
+JD: ${jdText.substring(0, 3000)}`, 500);
+  }
+
+  // ==================== COVER LETTER ====================
+  async function generateCoverLetter(profile, jdText, tone = 'professional') {
+    return await callAI(`Write a tailored cover letter. Tone: ${tone}. Use the profile and JD.
+
+Candidate: ${JSON.stringify(profile)}
+Job (excerpt): ${jdText.substring(0, 2000)}
+
+4 paragraphs max. Include specific skills from profile matched to JD requirements.`, 1000);
   }
 
   // ==================== MAIN FILL FUNCTION ====================
-  async function fillForms() {
-    const data = await getProfile();
+  async function fillForms(data) {
     if (!data || Object.keys(data).length === 0) {
-      showNotification('❌ پروفایلی ذخیره نشده!', 'error');
-      return;
+      data = await getProfile();
+      if (!data || Object.keys(data).length === 0) { showNotification('❌ پروفایل نداره!', 'error'); return; }
     }
-
     let filled = 0, total = 0;
-
-    // Process all form elements
-    document.querySelectorAll('input, textarea, select').forEach(field => {
-      const tagName = field.tagName.toLowerCase();
-      const inputType = field.type?.toLowerCase();
-
-      // Skip non-fillable inputs
-      if (['submit', 'button', 'reset', 'file', 'image', 'hidden'].includes(inputType)) return;
-
-      // Handle <select> dropdowns
-      if (tagName === 'select') {
-        total++;
-        const key = matchField(field);
-        if (key && data[key] && fillSelectField(field, data[key])) {
-          filled++;
-          field.style.outline = '2px solid #00ff88';
-          setTimeout(() => field.style.outline = '', 2000);
-        }
-        return;
-      }
-
-      // Handle checkbox/radio
-      if (inputType === 'checkbox' || inputType === 'radio') {
-        total++;
-        const key = matchField(field);
-        if (key && data[key]) {
-          if (fillCheckboxRadio(field, data[key])) {
-            filled++;
-            field.style.outline = '2px solid #00ff88';
-            setTimeout(() => field.style.outline = '', 2000);
-          }
-        }
-        return;
-      }
-
-      // Handle text/textarea inputs
+    const ats = detectATS();
+    // ATS-specific: use atsFieldMap as priority matcher
+    const atsFieldMap = ats?.fieldMap || {};
+    document.querySelectorAll('input, textarea, select').forEach(f => {
+      const tag = f.tagName.toLowerCase(); const type = f.type?.toLowerCase();
+      if (['submit', 'button', 'reset', 'file', 'image', 'hidden'].includes(type) || tag === 'hidden') return;
       total++;
-      const key = matchField(field);
-      if (key && data[key] && fillInputField(field, data[key])) {
-        filled++;
-        field.style.outline = '2px solid #00ff88';
-        setTimeout(() => field.style.outline = '', 2000);
-      }
+      // Try ATS fieldMap first
+      let key = atsFieldMap[(f.name || '').split('.').pop()] || atsFieldMap[(f.id || '').split('.').pop()] || matchField(f);
+      if (tag === 'select') { if (key && data[key] && fillSelect(f, data[key])) filled++; return; }
+      if (type === 'checkbox') { if (key && data[key] && fillCheckbox(f, data[key])) filled++; return; }
+      if (type === 'radio') { if (key && data[key]) { f.click(); f.dispatchEvent(new Event('change', { bubbles: true })); filled++; } return; }
+      if (key && data[key] && fillInput(f, data[key])) { filled++; f.style.outline = '2px solid #00ff88'; setTimeout(() => f.style.outline = '', 2000); }
     });
-
-    // Also try to fill React-style custom dropdowns
-    document.querySelectorAll('[role="combobox"], [role="listbox"], [role="option"]').forEach(el => {
-      total++;
-      const key = matchField(el);
-      if (key && data[key]) {
-        // Find the hidden select bound to this custom dropdown
-        const hiddenSelect = el.parentElement?.querySelector('select') ||
-                             el.closest('[class*="select"]')?.querySelector('select');
-        if (hiddenSelect && fillSelectField(hiddenSelect, data[key])) {
-          filled++;
-          return;
-        }
-        // Try clicking the option matching the value
-        const option = el.textContent.toLowerCase().includes(data[key].toLowerCase());
-        if (option && el.getAttribute('role') === 'option') {
-          el.click();
-          filled++;
-        }
-      }
-    });
-
-    showNotification(
-      filled > 0 ? `✅ ${filled}/${total} فیلد پر شد` : '⚠️ فیلدی مطابقت نداشت',
-      filled > 0 ? 'success' : 'warning'
-    );
+    showNotification(`${filled}/${total} فیلد (ATS: ${ats?.name || 'none'})`, filled > 0 ? 'success' : 'warning');
+    return { filled, total, ats };
   }
 
+  // ==================== Custom Questions Handler ====================
+  async function answerQuestions(profile) {
+    const questions = detectCustomQuestions();
+    if (!questions.length) return;
+    showNotification(`🤖 ${questions.length} سوال سفارشی — درحال پاسخ...`, 'warning');
+    for (const q of questions) {
+      const answer = await answerCustomQuestion(q.text, profile);
+      if (answer) {
+        q.field.value = answer;
+        q.field.dispatchEvent(new Event('change', { bubbles: true }));
+        q.field.style.outline = '2px solid #7c3aed';
+        setTimeout(() => q.field.style.outline = '', 3000);
+      }
+    }
+  }
+
+  // ==================== SIDE PANEL ====================
+  // Inject JobWizard-style sidebar with info
+  async function injectSidePanel(profile, jdText) {
+    // Don't inject twice
+    if (document.getElementById('afp-sidebar')) return;
+    const sidebar = document.createElement('div');
+    sidebar.id = 'afp-sidebar';
+    sidebar.style.cssText = `position:fixed;top:80px;right:20px;width:320px;max-height:calc(100vh-120px);background:#0f0f23;border:1px solid #00d4ff;border-radius:16px;z-index:999999;padding:16px;font-size:12px;color:#e0e0e0;direction:rtl;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,.6);font-family:'Segoe UI',Tahoma,sans-serif`;
+    sidebar.innerHTML = `<div style="color:#00d4ff;font-size:14px;font-weight:700;margin-bottom:8px">🤖 AutoFill Pro</div>`;
+    document.body.appendChild(sidebar);
+
+    // Show ATS detected
+    const ats = detectATS();
+    if (ats) showSidebarItem(sidebar, '🔍', `ATS شناسی شد: **${ats.name}**`);
+
+    // Fetch JD + Summarize + Match + Cover Letter in parallel
+    if (jdText && jdText.length > 100) {
+      showSidebarItem(sidebar, '⏳', 'درحال تحلیل JD و پروفایل...');
+      const profile = await getProfile();
+      const apiKey = await getApiKey();
+
+      if (apiKey) {
+        // Parallel AI calls
+        const prompt_combined = `Do all 3 tasks using the provided data:
+
+TASK 1 — Summarize this job description concisely (2-3 bullet points about role, skills required, company vibe).
+
+TASK 2 — Calculate fit score (0–100) between candidate profile and JD. Show 2 strengths and 2 gaps.
+
+TASK 3 — Draft a cover letter (3 paragraphs, professional tone, match skills to JD).
+
+Candidate profile:
+${JSON.stringify(profile)}
+
+Job description:
+${jdText.substring(0, 3000)}
+
+Return JSON:
+{"summary":"...","score":85,"strengths":["a","b"],"gaps":["c","d"],"coverLetter":"..."}`;
+
+        try {
+          const result = await callAI(prompt_combined, 1200);
+          const json = result ? JSON.parse(result.match(/\{[\s\S]*\}/)?.[0] || '{}') : {};
+          if (json.summary) showSidebarItem(sidebar, '📊', `<b>خلاصه JD:</b><div style="margin-top:4px;font-size:11px">${json.summary}</div>`);
+          if (json.score) showSidebarItem(sidebar, '⭐', `<b>Match Score: ${json.score}%</b><div style="margin-top:4px">✅ ${(json.strengths||[]).join('<br>✅ ')}<br>⚠️ ${(json.gaps||[]).join('<br>⚠️ ')}</div>`);
+          if (json.coverLetter) {
+            showSidebarItem(sidebar, '📧', `<b>Cover Letter:</b><div style="margin-top:4px;font-size:11px;white-space:pre-wrap">${json.coverLetter.substring(0, 800)}...</div>`);
+            // Add copy button
+            const copyBtn = document.createElement('button');
+            copyBtn.style.cssText = 'margin-top:8px;padding:6px 12px;background:#00d4ff;color:#000;border:none;border-radius:6px;font-size:11px;cursor:pointer;width:100%';
+            copyBtn.textContent = '📋 کپی Cover Letter';
+            copyBtn.addEventListener('click', () => { navigator.clipboard.writeText(json.coverLetter); showNotification('📋 کپی شد!', 'success'); });
+            sidebar.appendChild(copyBtn);
+          }
+        } catch (e) { showSidebarItem(sidebar, '❌', 'خطا در تحلیل JD'); }
+      } else {
+        showSidebarItem(sidebar, '🔑', 'API Key رایگان بگیر تا JD تحلیل بشه');
+      }
+    }
+  }
+
+  function showSidebarItem(sidebar, icon, html) {
+    const div = document.createElement('div');
+    div.style.cssText = 'margin-bottom:12px;padding:8px;background:rgba(0,212,255,0.05);border-radius:8px;border-left:2px solid #00d4ff';
+    div.innerHTML = `<span style="margin-right:4px">${icon}</span> ${html}`;
+    // Clear "loading" placeholder
+    const loading = sidebar.querySelector('[data-loading]');
+    if (loading) loading.remove();
+    sidebar.appendChild(div);
+  }
+
+  // ==================== NOTIFICATIONS ====================
   function showNotification(text, type) {
     const colors = { success: '#00ff88', error: '#ff4444', warning: '#ffaa00' };
     const el = document.createElement('div');
-    el.style.cssText = `position:fixed;top:20px;right:20px;background:#1a1a2e;color:${colors[type] || '#fff'};padding:16px 24px;border-radius:12px;border:1px solid ${colors[type] || '#333'};box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999999;font-size:14px;direction:rtl`;
+    el.style.cssText = `position:fixed;top:20px;right:340px;background:#1a1a2e;color:${colors[type]||'#fff'};padding:16px 24px;border-radius:12px;border:1px solid ${colors[type]||'#333'};box-shadow:0 8px 32px rgba(0,0,0,.5);z-index:999999;font-size:14px;direction:rtl`;
     el.textContent = text;
     document.body.appendChild(el);
     setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity .3s'; setTimeout(() => el.remove(), 300); }, 3000);
   }
 
   // ==================== LISTENERS ====================
-  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-    if (msg.action === 'fillForms') { fillForms(); sendResponse({ success: true }); }
-    if (msg.action === 'detectForms') {
-      const forms = document.querySelectorAll('form').length;
-      const inputs = document.querySelectorAll('input, textarea, select').length;
-      sendResponse({
-        formCount: forms,
-        fieldCount: inputs,
-        url: window.location.href,
-        hasSelects: document.querySelectorAll('select').length > 0,
-        hasCheckboxes: document.querySelectorAll('input[type="checkbox"], input[type="radio"]').length > 0
-      });
+  chrome.runtime.onMessage.addListener(async (msg, sender, sendResponse) => {
+    if (msg.action === 'fillForms') {
+      const profile = msg.profile || await getProfile();
+      fillForms(profile);
+      const jdText = extractJDText();
+      injectSidePanel(profile, jdText);
+      answerQuestions(profile);
+      sendResponse({ success: true });
+    }
+    if (msg.action === 'analyzePage') {
+      const jdText = extractJDText();
+      const profile = await getProfile();
+      injectSidePanel(profile, jdText);
+      sendResponse({ jdFound: !!jdText, jdLength: jdText.length });
+    }
+    if (msg.action === 'generateCoverLetter') {
+      const jdText = extractJDText();
+      const profile = await getProfile();
+      const letter = await generateCoverLetter(profile, jdText, msg.tone || 'professional');
+      sendResponse({ coverLetter: letter });
+    }
+    if (msg.action === 'detectATS') {
+      const ats = detectATS();
+      sendResponse({ ats: ats?.name, selectors: ats?.selectors });
     }
   });
 })();

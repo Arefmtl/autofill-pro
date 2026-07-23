@@ -34,6 +34,7 @@
     <div class="tabs">
       <button class="tab active" data-tab="profile">👤 پروفایل</button>
       <button class="tab" data-tab="upload">📄 رزومه</button>
+      <button class="tab" data-tab="jobs">💼 اپلای</button>
       <button class="tab" data-tab="convert">🔄 تبدیل</button>
       <button class="tab" data-tab="settings">⚙️ تنظیمات</button>
     </div>
@@ -169,8 +170,54 @@
       </div>
     </div>
 
-    <!-- Convert Tab (utility — secondary use) -->
-    <div class="tab-content" id="convert">
+    <!-- Jobs/Apply Tab (JobWizard clone) -->
+    <div class="tab-content" id="jobs">
+      <div class="jobs-header">
+        <h3>💼 ابزارهای اپلای</h3>
+        <p class="small">تحلیل JD + Cover Letter + Match Score</p>
+      </div>
+
+      <!-- Current Page Detection -->
+      <div class="page-detection" id="pageDetection">
+        <span id="atsBadge">⏳ درحال تشخیص...</span>
+      </div>
+
+      <!-- JD Summary -->
+      <div class="form-group">
+        <label>📊 خلاصه JD</label>
+        <div id="jdSummary" class="jd-box">
+          <p class="jd-placeholder">روی یه صفحه job برو و "تحلیل کن" رو بزن</p>
+        </div>
+      </div>
+
+      <!-- Match Score -->
+      <div class="form-group">
+        <label>⭐ Match Score</label>
+        <div id="matchScore" class="match-box">
+          <p class="jd-placeholder">درصد تطابق پروفایل با JD</p>
+        </div>
+      </div>
+
+      <!-- Cover Letter -->
+      <div class="form-group">
+        <label>📧 Cover Letter</label>
+        <select id="coverLetterTone" style="margin-bottom:6px">
+          <option value="professional">Professional</option>
+          <option value="enthusiastic">Enthusiastic</option>
+          <option value="short">Short & Direct</option>
+        </select>
+        <textarea id="coverLetterPreview" rows="6" readonly placeholder="Cover Letter اینجا میاد..." style="font-size:11px;white-space:pre-wrap;"></textarea>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="btn btn-success" id="copyCoverLetter">📋 کپی</button>
+          <button class="btn btn-primary" id="generateCoverLetter">🤖 ساخت دوباره</button>
+        </div>
+      </div>
+
+      <button class="btn btn-fill" id="analyzePageBtn">🔍 تحلیل صفحه</button>
+      <button class="btn btn-fill" id="fillPageBtn" style="margin-top:6px;background:linear-gradient(135deg,#00ff88,#00d4ff)">
+        🚀 پر کردن فرم
+      </button>
+    </div>
       <div class="convert-section">
         <h3>🔄 تبدیل فایل</h3>
         <p class="small">فرمت رزومه‌ات رو سریع تبدیل کن</p>

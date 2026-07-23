@@ -731,6 +731,59 @@ body {
   box-shadow: 0 2px 12px rgba(0, 212, 255, 0.3);
 }
 
+/* ==================== JOBS TAB ==================== */
+.jobs-header {
+  margin-bottom: 12px;
+}
+
+.jobs-header h3 {
+  font-size: 14px;
+  color: #00d4ff;
+  margin-bottom: 2px;
+}
+
+.page-detection {
+  padding: 10px;
+  background: rgba(0, 212, 255, 0.05);
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+#atsBadge {
+  color: #00ff88;
+  font-weight: 600;
+}
+
+.jd-box, .match-box {
+  min-height: 60px;
+  padding: 10px;
+  background: rgba(255, 204, 0, 0.03);
+  border: 1px solid rgba(255, 204, 0, 0.15);
+  border-radius: 8px;
+  font-size: 11px;
+  line-height: 1.5;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.match-box {
+  background: rgba(0, 255, 136, 0.03);
+  border-color: rgba(0, 255, 136, 0.15);
+}
+
+.jd-placeholder {
+  color: #555;
+  text-align: center;
+  padding: 20px 0;
+}
+
+#coverLetterPreview {
+  max-height: 200px;
+  resize: vertical;
+}
+
 /* ==================== SCROLLBAR ==================== */
 ::-webkit-scrollbar {
   width: 6px;
