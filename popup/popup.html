@@ -8,276 +8,244 @@
 </head>
 <body>
   <div class="container">
-    <!-- Header — compact & clean -->
-    <div class="header">
-      <div class="header-row">
-        <img src="../logo.png" alt="AutoFill Pro" class="header-logo">
-        <div class="header-text">
-          <h1>AutoFill Pro</h1>
-          <p class="subtitle">اپلای هوشمند — رزومه → پروفایل → فرم</p>
+
+    <!-- ===== ONBOARDING (no API key yet) ===== -->
+    <div id="onboarding" style="display:none">
+      <div class="onboard-card">
+        <div class="onboard-logo">⚡</div>
+        <h1>AutoFill Pro</h1>
+        <p class="onboard-sub">اپلای هوشمند با هوش مصنوعی</p>
+        <div class="onboard-steps">
+          <div class="step-row"><span class="step-num">۱</span><span>رزومه‌ات رو آپلود کن</span></div>
+          <div class="step-row"><span class="step-num">۲</span><span>AI اطلاعات رو استخراج می‌کنه</span></div>
+          <div class="step-row"><span class="step-num">۳</span><span>هر job — Cover Letter + Match + Auto-fill</span></div>
+        </div>
+        <div class="onboard-api">
+          <p>برای شروع، یه API Key رایگان لازمه:</p>
+          <a href="https://opencode.ai" target="_blank" class="onboard-link">🔑 دریافت کلید رایگان از OpenCode →</a>
+          <input type="password" id="onboardApiKey" placeholder="API Key رو اینجا بذار..." class="onboard-input">
+          <button id="onboardStart" class="onboard-btn">🚀 شروع کن</button>
+          <p class="onboard-note">فقط یکبار لازمه. اطلاعاتت محفوظه 🔒</p>
         </div>
       </div>
-      <div class="header-links">
-        <a href="https://github.com/Arefmtl/autofill-pro" target="_blank" class="gh-btn" title="GitHub">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2 0 1.9 1.2 1.9 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 016 0C17.3 5 18.3 5.3 18.3 5.3c.6 1.6.2 2.8.1 3.2.8.8 1.3 1.9 1.3 3.1 0 4.6-2.8 5.7-5.5 6 .4.3.8 1 .8 2v3c0 .3.2.7.8.6A12 12 0 0012 .3"/></svg>
-          <span id="versionBadge">v3.0</span>
-        </a>
-        <a href="https://github.com/Arefmtl/autofill-pro" target="_blank" class="star-btn">
-          ⭐
-        </a>
-      </div>
-      <div id="updateBanner" style="display:none"></div>
     </div>
 
-    <!-- Tabs — horizontal pill row -->
-    <div class="tabs">
-      <button class="tab active" data-tab="jobs">💼 اپلای</button>
-      <button class="tab" data-tab="profile">👤 پروفایل</button>
-      <button class="tab" data-tab="upload">📄 آپلود</button>
-      <button class="tab" data-tab="convert">🔄 تبدیل</button>
-      <button class="tab" data-tab="settings">⚙️</button>
-    </div>
+    <!-- ===== MAIN APP (API key exists) ===== -->
+    <div id="mainApp">
 
-    <!-- === JOBS TAB === -->
-    <div class="tab-content active" id="jobs">
-
-      <!-- Quick-Action Cards -->
-      <div class="action-cards">
-        <button class="action-card" id="analyzePageBtn">
-          <span class="ac-icon">🔍</span>
-          <span class="ac-title">تحلیل JD</span>
-          <span class="ac-sub">خلاصه + Match</span>
-        </button>
-        <button class="action-card" id="fillFromJobsBtn">
-          <span class="ac-icon">🚀</span>
-          <span class="ac-title">پر کردن فرم</span>
-          <span class="ac-sub">یک کلیک</span>
-        </button>
-        <button class="action-card" id="genCoverBtn">
-          <span class="ac-icon">✉️</span>
-          <span class="ac-title">Cover Letter</span>
-          <span class="ac-sub">سه تُن</span>
-        </button>
-      </div>
-
-      <!-- ATS Badge -->
-      <div class="ats-badge" id="atsBadgeSection">
-        <div class="ats-text">
-          <span class="ats-icon">📍</span>
-          <span id="atsBadge">درحال تشخیص...</span>
-        </div>
-        <select id="coverLetterTone" class="tone-select">
-          <option value="professional">Professional</option>
-          <option value="enthusiastic">Enthusiastic</option>
-          <option value="short">Short</option>
-        </select>
-      </div>
-
-      <!-- Results Cards — show only when data exists -->
-      <div class="result-cards" id="resultCards" style="display:none">
-        <!-- JD Summary Card -->
-        <div class="result-card jd-card">
-          <div class="rc-header">
-            <span class="rc-icon">📊</span>
-            <span class="rc-title">خلاصه JD</span>
-            <button class="rc-copy-btn" data-target="jdSummaryCopy">📋</button>
+      <!-- Header -->
+      <div class="header">
+        <div class="header-row">
+          <img src="../logo.png" alt="AutoFill Pro" class="header-logo">
+          <div class="header-text">
+            <h1>AutoFill Pro</h1>
+            <p class="subtitle" id="headerSubtitle">اپلای هوشمند</p>
           </div>
-          <div class="rc-body" id="jdSummary"></div>
+          <div class="header-right">
+            <a href="https://github.com/Arefmtl/autofill-pro" target="_blank" class="header-link">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 00-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2 0 1.9 1.2 1.9 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-6 0-1.2.5-2.3 1.3-3.1-.2-.4-.6-1.6 0-3.2 0 0 1-.3 3.4 1.2a11.5 11.5 0 016 0C17.3 5 18.3 5.3 18.3 5.3c.6 1.6.2 2.8.1 3.2.8.8 1.3 1.9 1.3 3.1 0 4.6-2.8 5.7-5.5 6 .4.3.8 1 .8 2v3c0 .3.2.7.8.6A12 12 0 0012 .3"/></svg>
+              <span id="versionBadge">v4.0</span>
+            </a>
+            <span id="updateBannerInline" style="display:none;color:#22c55e;font-size:10px;cursor:pointer">🔄 آپدیت</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" data-tab="upload">📄 رزومه</button>
+        <button class="tab" data-tab="jobs">💼 اپلای</button>
+        <button class="tab" data-tab="profile">👤 پروفایل</button>
+        <button class="tab" data-tab="settings">⚙️</button>
+      </div>
+
+      <!-- === UPLOAD TAB (First step) === -->
+      <div class="tab-content active" id="upload">
+        <div id="uploadIdle">
+          <div class="upload-zone" id="dropZone">
+            <div class="upload-icon">📄</div>
+            <p>رزومه‌ات رو بکش اینجا</p>
+            <p class="small">PDF, DOCX, TXT — AI همه چیز رو استخراج می‌کنه</p>
+            <button class="btn btn-primary" id="selectFile">انتخاب فایل</button>
+            <input type="file" id="fileInput" accept=".pdf,.docx,.txt" hidden>
+          </div>
+        </div>
+        <div id="uploadLoading" style="display:none">
+          <div class="loading-card">
+            <div class="spinner"></div>
+            <p>🤖 AI داره رزومه‌ات رو تحلیل می‌کنه...</p>
+            <p class="small">استخراج اطلاعات، مهارت‌ها، تجربه...</p>
+          </div>
+        </div>
+        <div id="uploadDone" style="display:none">
+          <div class="success-card">
+            <div class="success-icon">✅</div>
+            <p>رزومه با موفقیت تحلیل شد!</p>
+            <p class="small" id="uploadDoneSummary">۱۴ فیلد استخراج شد</p>
+            <div class="success-actions">
+              <button class="btn btn-primary" id="viewProfileBtn">👤 مشاهده پروفایل</button>
+              <button class="btn btn-secondary" id="goToJobsBtn">💼 بریم سراغ job</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- === JOBS TAB (Main workflow) === -->
+      <div class="tab-content" id="jobs">
+        <!-- ATS Status -->
+        <div class="ats-row" id="atsRow">
+          <span class="ats-label">📍 ATS:</span>
+          <span id="atsName" class="ats-name">تشخیص...</span>
+          <span id="atsUrl" class="ats-url"></span>
+        </div>
+
+        <!-- JD Summary Card -->
+        <div class="card" id="jdCard">
+          <div class="card-header">
+            <span class="card-icon">📊</span>
+            <span class="card-title">خلاصه JD</span>
+            <button class="card-action" id="analyzeBtn">🔍 تحلیل</button>
+          </div>
+          <div class="card-body" id="jdSummary">
+            <p class="placeholder-text">روی یه صفحه job برو و "تحلیل" رو بزن</p>
+          </div>
         </div>
 
         <!-- Match Score Card -->
-        <div class="result-card match-card">
-          <div class="rc-header">
-            <span class="rc-icon">⭐</span>
-            <span class="rc-title">Match Score</span>
+        <div class="card match-card" id="matchCard" style="display:none">
+          <div class="card-header">
+            <span class="card-icon">🎯</span>
+            <span class="card-title">Match Score</span>
           </div>
-          <div class="rc-body" id="matchScore">
-            <div class="match-ring" id="matchRing">
-              <span class="match-percent">0%</span>
+          <div class="card-body">
+            <div class="score-row">
+              <div class="score-ring" id="scoreRing">
+                <span id="scoreNum">0</span>
+              </div>
+              <div class="score-details" id="scoreDetails"></div>
             </div>
-            <div class="match-details" id="matchDetails"></div>
           </div>
+        </div>
+
+        <!-- Keywords Card -->
+        <div class="card" id="keywordsCard" style="display:none">
+          <div class="card-header">
+            <span class="card-icon">🏷️</span>
+            <span class="card-title">کلمات کلیدی JD</span>
+          </div>
+          <div class="card-body" id="keywordsList"></div>
+        </div>
+
+        <!-- Tailored Resume Card -->
+        <div class="card" id="resumeCard" style="display:none">
+          <div class="card-header">
+            <span class="card-icon">📝</span>
+            <span class="card-title">رزومه شخصی‌سازی شده</span>
+            <button class="card-action" id="copyResume">📋</button>
+          </div>
+          <div class="card-body cl-body" id="tailoredResume"></div>
         </div>
 
         <!-- Cover Letter Card -->
-        <div class="result-card cl-card">
-          <div class="rc-header">
-            <span class="rc-icon">✉️</span>
-            <span class="rc-title">Cover Letter</span>
-            <button class="rc-copy-btn" id="copyCoverLetter">📋</button>
-            <button class="rc-refresh-btn" id="generateCoverLetter">🔄</button>
+        <div class="card" id="clCard" style="display:none">
+          <div class="card-header">
+            <span class="card-icon">✉️</span>
+            <span class="card-title">Cover Letter</span>
+            <button class="card-action" id="copyCL">📋</button>
           </div>
-          <div class="rc-body cl-body" id="coverLetterPreview"></div>
+          <div class="card-body cl-body" id="coverLetter"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="action-row">
+          <button class="btn btn-primary action-btn" id="fillBtn">
+            🚀 پر کردن فرم
+          </button>
         </div>
       </div>
 
-      <!-- Empty State -->
-      <div class="jobs-empty" id="jobsEmpty">
-        <div class="jobs-empty-icon">📋</div>
-        <p>روی یه صفحه job برو و روی دکمه بالا کلیک کن</p>
-        <p class="jobs-empty-sub">JD تحلیل میشه + Match Score + Cover Letter</p>
-      </div>
-    </div>
-
-    <!-- === PROFILE TAB === -->
-    <div class="tab-content" id="profile">
-      <div class="empty-state" id="emptyState">
-        <div class="empty-icon">👋</div>
-        <h3>پروفایلت رو بساز</h3>
-        <p class="small">دستی پر کن یا رزومه آپلود کن → خودکار پر میشه</p>
-        <button class="btn btn-primary" id="emptyUploadBtn">📄 آپلود رزومه</button>
-      </div>
-
-      <div id="profileForm" style="display:none">
-        <!-- Profile Selector — compact -->
-        <div class="mini-selector">
-          <select id="profileSelect" class="mini-select"></select>
-          <button class="icon-btn" id="addProfileBtn" title="جدید">➕</button>
-          <button class="icon-btn danger" id="deleteProfileBtn" title="حذف">🗑️</button>
+      <!-- === PROFILE TAB === -->
+      <div class="tab-content" id="profile">
+        <div class="empty-state" id="emptyState">
+          <div class="empty-icon">📄</div>
+          <p>رزومه آپلود کن تا پروفایل خودکار پر بشه</p>
+          <button class="btn btn-primary" id="emptyUploadBtn">📄 آپلود رزومه</button>
         </div>
-        <div class="profile-name-row" id="profileNameEdit" style="display:none">
-          <input type="text" id="profileName" placeholder="نام پروفایل">
-          <button class="icon-btn success" id="confirmProfileName">✓</button>
-        </div>
-
-        <!-- Quick fields — 4 most important -->
-        <div class="form-group">
-          <select id="resumeLanguage" class="lang-select">
-            <option value="fa">🇮🇷</option>
-            <option value="en">🇬🇧</option>
-            <option value="de">🇩🇪</option>
-          </select>
-        </div>
-        <div class="form-row">
-          <div class="form-group half">
-            <input type="text" id="firstName" placeholder="نام">
+        <div id="profileForm" style="display:none">
+          <div class="mini-row">
+            <select id="profileSelect" class="mini-select"></select>
+            <button class="icon-btn" id="addProfileBtn">➕</button>
+            <button class="icon-btn danger" id="deleteProfileBtn">🗑️</button>
           </div>
-          <div class="form-group half">
-            <input type="text" id="lastName" placeholder="نام خانوادگی">
+          <div class="profile-name-edit" id="profileNameEdit" style="display:none">
+            <input type="text" id="profileName" placeholder="نام پروفایل">
+            <button class="icon-btn success" id="confirmProfileName">✓</button>
           </div>
-        </div>
-        <div class="form-group"><input type="email" id="email" placeholder="ایمیل"></div>
-        <div class="form-group"><input type="tel" id="phone" placeholder="تلفن"></div>
-        <div class="form-group"><input type="text" id="address" placeholder="آدرس"></div>
-        <div class="form-group"><input type="url" id="linkedin" placeholder="لینکدین"></div>
-
-        <!-- Expand for more -->
-        <details class="more-fields">
-          <summary>اطلاعات بیشتر ▼</summary>
-          <div class="form-group"><input type="url" id="github" placeholder="GitHub"></div>
-          <div class="form-group"><input type="url" id="website" placeholder="وب‌سایت"></div>
-          <div class="form-group"><textarea id="summary" rows="2" placeholder="درباره من"></textarea></div>
-          <div class="form-group"><textarea id="skills" rows="2" placeholder="مهارت‌ها: Python, ML,..."></textarea></div>
-          <div class="form-group"><textarea id="experience" rows="2" placeholder="تجربه کاری"></textarea></div>
-          <div class="form-group"><textarea id="education" rows="2" placeholder="تحصیلات"></textarea></div>
           <div class="form-row">
-            <div class="form-group half"><input type="text" id="nationality" placeholder="ملیت"></div>
-            <div class="form-group half"><input type="text" id="visaStatus" placeholder="ویزا"></div>
+            <div class="form-group half"><input type="text" id="firstName" placeholder="نام"></div>
+            <div class="form-group half"><input type="text" id="lastName" placeholder="نام خانوادگی"></div>
           </div>
-        </details>
-
-        <button class="btn btn-primary" id="saveProfile">💾 ذخیره</button>
-        <button class="btn btn-outline" id="saveAsProfile">📋 ذخیره به عنوان پروفایل جدید</button>
-      </div>
-    </div>
-
-    <!-- === UPLOAD TAB === -->
-    <div class="tab-content" id="upload">
-      <div class="upload-area" id="dropZone">
-        <div class="upload-icon">📎</div>
-        <p>رزومه‌ات رو بکش اینجا</p>
-        <p class="small">PDF, DOCX, TXT</p>
-        <button class="btn btn-primary" id="selectFile">انتخاب فایل</button>
-        <input type="file" id="fileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" hidden>
-      </div>
-      <div class="uploaded-row" id="uploadedFile" style="display:none">
-        <span class="file-icon">✅</span>
-        <span class="file-name" id="fileName"></span>
-        <button class="btn btn-danger btn-sm" id="removeFile">حذف</button>
-      </div>
-      <div class="extracted-data" id="extractedData" style="display:none">
-        <h3>📊 استخراج شده:</h3>
-        <div id="dataPreview"></div>
-      </div>
-    </div>
-
-    <!-- === CONVERT TAB === -->
-    <div class="tab-content" id="convert">
-      <div class="form-group">
-        <label>فرمت خروجی</label>
-        <select id="targetFormat">
-          <option value="txt">TXT</option><option value="json">JSON</option>
-          <option value="csv">CSV</option><option value="html">HTML</option>
-          <option value="md">Markdown</option>
-        </select>
-      </div>
-      <div class="upload-area compact" id="convertDropZone">
-        <div class="upload-icon">📁</div>
-        <p>فایل رو بکش / کلیک کن</p>
-        <input type="file" id="convertFileInput" accept=".pdf,.docx,.txt,.jpg,.jpeg,.png" hidden>
-      </div>
-      <div class="uploaded-row" id="convertFileInfo" style="display:none">
-        <span class="file-icon">📄</span>
-        <span id="convertFileName"></span>
-        <span class="file-size" id="convertFileSize"></span>
-      </div>
-      <button class="btn btn-fill" id="convertBtn" style="display:none">🔄 تبدیل کن</button>
-      <div class="convert-result" id="convertResult" style="display:none">
-        <div class="result-preview" id="resultPreview"></div>
-        <div class="result-actions">
-          <button class="btn btn-success" id="downloadResult">📥 دانلود</button>
-          <button class="btn btn-primary" id="copyResult">📋 کپی</button>
+          <div class="form-group"><input type="email" id="email" placeholder="ایمیل"></div>
+          <div class="form-group"><input type="tel" id="phone" placeholder="تلفن"></div>
+          <div class="form-group"><input type="text" id="address" placeholder="آدرس"></div>
+          <div class="form-group"><input type="url" id="linkedin" placeholder="LinkedIn"></div>
+          <details class="more-fields">
+            <summary>اطلاعات بیشتر ▾</summary>
+            <div class="form-group"><input type="url" id="github" placeholder="GitHub"></div>
+            <div class="form-group"><input type="url" id="website" placeholder="وب‌سایت"></div>
+            <div class="form-group"><textarea id="summary" rows="2" placeholder="درباره من"></textarea></div>
+            <div class="form-group"><textarea id="skills" rows="2" placeholder="مهارت‌ها"></textarea></div>
+            <div class="form-group"><textarea id="experience" rows="2" placeholder="تجربه کاری"></textarea></div>
+            <div class="form-group"><textarea id="education" rows="2" placeholder="تحصیلات"></textarea></div>
+            <div class="form-row">
+              <div class="form-group half"><input type="text" id="nationality" placeholder="ملیت"></div>
+              <div class="form-group half"><input type="text" id="visaStatus" placeholder="ویزا"></div>
+            </div>
+          </details>
+          <button class="btn btn-primary" id="saveProfile">💾 ذخیره</button>
         </div>
       </div>
-      <div class="batch-section">
-        <h4>📦 تبدیل دسته‌ای</h4>
-        <div class="upload-area compact" id="batchDropZone">
-          <div class="upload-icon">📂</div>
-          <p>چند فایل</p>
-          <input type="file" id="batchFileInput" accept=".pdf,.docx,.txt" multiple hidden>
+
+      <!-- === SETTINGS TAB === -->
+      <div class="tab-content" id="settings">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-icon">🤖</span>
+            <span class="card-title">API Key</span>
+            <span class="card-badge success" id="apiKeyStatus">✅ فعال</span>
+          </div>
+          <div class="card-body">
+            <input type="password" id="apiKey" placeholder="API Key..." class="full-input">
+            <a href="https://opencode.ai" target="_blank" class="link-text">🔑 دریافت کلید رایگان →</a>
+          </div>
         </div>
-        <div id="batchFiles"></div>
-        <button class="btn btn-primary" id="batchConvertBtn" style="display:none">🔄 تبدیل همه</button>
+        <div class="card">
+          <div class="card-header">
+            <span class="card-icon">⚙️</span>
+            <span class="card-title">تنظیمات</span>
+          </div>
+          <div class="card-body">
+            <div class="toggle-row">
+              <span>پر کردن خودکار</span>
+              <input type="checkbox" id="autoFillEnabled" checked>
+            </div>
+            <div class="toggle-row">
+              <span>فقط سایت‌های کاریابی</span>
+              <input type="checkbox" id="jobSitesOnly">
+            </div>
+            <textarea id="allowedSites" rows="2" class="full-input" placeholder="linkedin.com, stepstone.de, ..."></textarea>
+          </div>
+        </div>
+        <button class="btn btn-primary" id="saveSettings">💾 ذخیره</button>
+        <button class="btn btn-secondary" id="checkUpdates" style="margin-top:6px">🔄 بررسی آپدیت</button>
+        <div id="updateStatus" style="text-align:center;margin-top:4px;font-size:10px"></div>
       </div>
+
+      <!-- Status Bar -->
+      <div class="status-bar" id="statusBar"><span id="statusText"></span></div>
     </div>
 
-    <!-- === SETTINGS TAB === -->
-    <div class="tab-content" id="settings">
-      <div class="ai-card">
-        <div class="ai-card-header">
-          <span class="ai-card-icon">🤖</span>
-          <span class="ai-card-title">AI فعال‌سازی</span>
-        </div>
-        <p class="ai-card-desc">API Key رایگان → هوش مصنوعی همه ابزارها رو فعال می‌کنه</p>
-        <a href="https://opencode.ai" target="_blank" class="ai-card-btn">
-          🔑 دریافت کلید رایگان →
-        </a>
-      </div>
-      <div class="form-group" style="margin-top:8px">
-        <input type="password" id="apiKey" placeholder="API Key رو اینجا بذار...">
-      </div>
-      <div class="toggle-group">
-        <label>پر کردن خودکار</label>
-        <input type="checkbox" id="autoFillEnabled" checked>
-      </div>
-      <div class="toggle-group">
-        <label>فقط سایت‌های کاریابی</label>
-        <input type="checkbox" id="jobSitesOnly">
-      </div>
-      <div class="form-group">
-        <textarea id="allowedSites" rows="2" placeholder="linkedin.com, stepstone.de, ..."></textarea>
-      </div>
-      <button class="btn btn-primary" id="saveSettings">💾 ذخیره</button>
-      <button class="btn btn-secondary" id="checkUpdates">🔄 بررسی آپدیت</button>
-      <div id="updateStatus" class="update-status-text"></div>
-    </div>
-
-    <!-- Status Bar -->
-    <div class="status-bar" id="statusBar">
-      <span id="statusText"></span>
-    </div>
   </div>
-
   <script src="popup.js"></script>
 </body>
 </html>
