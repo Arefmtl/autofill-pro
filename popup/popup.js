@@ -607,79 +607,80 @@ document.addEventListener('DOMContentLoaded', () => {
     showStatus('✅ تنظیمات ذخیره شد!', 'success');
   });
 
-  // ==================== JOBS TAB (JobWizard features) ====================
-  const analyzePageBtn = document.getElementById('analyzePageBtn');
-  const fillPageBtn = document.getElementById('fillPageBtn');
-  const generateCoverLetterBtn = document.getElementById('generateCoverLetter');
-  const copyCoverLetterBtn = document.getElementById('copyCoverLetter');
+  // ==================== JOBS TAB (Redesigned) ====================
+    const analyzePageBtn = document.getElementById('analyzePageBtn');
+    const fillFromJobsBtn = document.getElementById('fillFromJobsBtn');
+    const genCoverBtn = document.getElementById('genCoverBtn');
+    const resultCards = document.getElementById('resultCards');
+    const jobsEmpty = document.getElementById('jobsEmpty');
 
-  async function detectAndShowATS() {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    chrome.tabs.sendMessage(tab.id, { action: 'detectATS' }, (resp) => {
-      const badge = document.getElementById('atsBadge');
-      if (resp?.ats) {
-        badge.textContent = `🔍 ATS: ${resp.ats}`;
-        badge.style.color = '#00ff88';
-      } else {
-        badge.textContent = `🌐 صفحه کاریابی تشخیص داده نشد`;
-        badge.style.color = '#ffaa00';
-      }
-    });
-  }
-
-  analyzePageBtn.addEventListener('click', async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const jdSummary = document.getElementById('jdSummary');
-    const matchScore = document.getElementById('matchScore');
-    const coverLetterPreview = document.getElementById('coverLetterPreview');
-
-    jdSummary.innerHTML = '<p class="jd-placeholder">⏳ درحال تحلیل JD...</p>';
-    matchScore.innerHTML = '<p class="jd-placeholder">⏳ محاسبه Match Score...</p>';
-    coverLetterPreview.value = '⏳ درحال ساخت Cover Letter...';
-
-    chrome.tabs.sendMessage(tab.id, { action: 'analyzePage' }, (resp) => {
-      if (!resp || !resp.jdFound) {
-        jdSummary.innerHTML = '<p class="jd-placeholder">❌ JD پیدا نشد. مطمئنی روی صفحه job هستی؟</p>';
-        return;
-      }
-      // The content script injects sidebar — we poll for it
-      // Instead, let's re-trigger with explicit requests
-      chrome.tabs.sendMessage(tab.id, { action: 'generateCoverLetter' }, (clResp) => {
-        if (clResp?.coverLetter) {
-          coverLetterPreview.value = clResp.coverLetter;
+    async function detectAndShowATS() {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      chrome.tabs.sendMessage(tab.id, { action: 'detectATS' }, (resp) => {
+        const badge = document.getElementById('atsBadge');
+        const section = document.getElementById('atsBadgeSection');
+        if (resp?.ats) {
+          badge.textContent = `ATS: ${resp.ats}`;
+          badge.style.color = '#a6e3a1';
+          if (section) section.style.borderColor = '#a6e3a1';
         } else {
-          coverLetterPreview.value = '⚠️ نیاز به API Key (تب تنظیمات)';
+          badge.textContent = 'ATS تشخیص داده نشد';
+          badge.style.color = '#f9e2af';
         }
       });
-    });
-  });
-
-  generateCoverLetterBtn.addEventListener('click', async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const coverLetterPreview = document.getElementById('coverLetterPreview');
-    const tone = document.getElementById('coverLetterTone').value;
-    coverLetterPreview.value = '⏳ درحال ساخت...';
-    chrome.tabs.sendMessage(tab.id, { action: 'generateCoverLetter', tone }, (resp) => {
-      coverLetterPreview.value = resp?.coverLetter || '⚠️ خطا';
-    });
-  });
-
-  copyCoverLetterBtn.addEventListener('click', () => {
-    const cl = document.getElementById('coverLetterPreview').value;
-    if (cl && cl !== '⏳ درحال ساخت...' && cl !== '⚠️ نیاز به API Key (تب تنظیمات)') {
-      navigator.clipboard.writeText(cl).then(() => showStatus('📋 کپی شد!', 'success'));
     }
-  });
 
-  fillPageBtn.addEventListener('click', async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    chrome.tabs.sendMessage(tab.id, { action: 'fillForms' });
-    showStatus('🚀 فرم پر شد!', 'success');
-    setTimeout(() => window.close(), 1000);
-  });
+    function showResultCards() { resultCards.style.display = 'flex'; jobsEmpty.style.display = 'none'; }
 
-  // Auto-detect ATS when jobs tab is opened
-  document.querySelector('[data-tab="jobs"]').addEventListener('click', detectAndShowATS);
+    function showLoadingInCards() {
+      showResultCards();
+      document.getElementById('jdSummary').textContent = '⏳ درحال تحلیل...';
+      document.getElementById('matchDetails').textContent = '⏳ محاسبه...';
+      document.getElementById('matchRing').querySelector('.match-percent').textContent = '...';
+      document.getElementById('coverLetterPreview').textContent = '⏳ درحال ساخت...';
+    }
+
+    analyzePageBtn.addEventListener('click', async () => {
+      showLoadingInCards();
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      chrome.tabs.sendMessage(tab.id, { action: 'analyzePage' }, (resp) => {
+        if (!resp || !resp.jdFound) {
+          document.getElementById('jdSummary').textContent = '❌ JD پیدا نشد — مطمئنی روی صفحه job هستی؟';
+          return;
+        }
+        // Also trigger cover letter
+        const tone = document.getElementById('coverLetterTone')?.value || 'professional';
+        chrome.tabs.sendMessage(tab.id, { action: 'generateCoverLetter', tone }, (clResp) => {
+          document.getElementById('coverLetterPreview').textContent = clResp?.coverLetter || '⚠️ نیاز به API Key';
+        });
+      });
+    });
+
+    genCoverBtn.addEventListener('click', async () => {
+      showResultCards();
+      document.getElementById('coverLetterPreview').textContent = '⏳ درحال ساخت...';
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      const tone = document.getElementById('coverLetterTone')?.value || 'professional';
+      chrome.tabs.sendMessage(tab.id, { action: 'generateCoverLetter', tone }, (resp) => {
+        document.getElementById('coverLetterPreview').textContent = resp?.coverLetter || '⚠️ خطا';
+      });
+    });
+
+    document.getElementById('copyCoverLetter').addEventListener('click', () => {
+      const text = document.getElementById('coverLetterPreview').textContent;
+      if (text && text !== '⏳ درحال ساخت...') {
+        navigator.clipboard.writeText(text).then(() => showStatus('📋 کپی شد!', 'success'));
+      }
+    });
+
+    fillFromJobsBtn.addEventListener('click', async () => {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      chrome.tabs.sendMessage(tab.id, { action: 'fillForms' });
+      showStatus('🚀 فرم پر شد!', 'success');
+      setTimeout(() => window.close(), 800);
+    });
+
+    document.querySelector('[data-tab="jobs"]').addEventListener('click', detectAndShowATS);
 
   removeFile.addEventListener('click', () => {
     chrome.storage.local.remove('resumeData');
