@@ -55,7 +55,9 @@
       <div class="tabs">
         <button class="tab active" data-tab="upload">📄 رزومه</button>
         <button class="tab" data-tab="jobs">💼 اپلای</button>
-        <button class="tab" data-tab="profile">👤 پروفایل</button>
+        <button class="tab" data-tab="tracker">📊 ترکر</button>
+        <button class="tab" data-tab="search">🔍 سرچ</button>
+        <button class="tab" data-tab="profile">👤</button>
         <button class="tab" data-tab="settings">⚙️</button>
       </div>
 
@@ -162,6 +164,80 @@
             🚀 پر کردن فرم
           </button>
         </div>
+      </div>
+
+      <!-- === TRACKER TAB (Job Application Tracker) === -->
+      <div class="tab-content" id="tracker">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-icon">📊</span>
+            <span class="card-title">Job Application Tracker</span>
+            <button class="card-action" id="addJobBtn">➕</button>
+          </div>
+          <div class="card-body">
+            <div class="tracker-stats" id="trackerStats">
+              <div class="stat-box"><span class="stat-num" id="statTotal">0</span><span class="stat-label">کل</span></div>
+              <div class="stat-box"><span class="stat-num" id="statApplied">0</span><span class="stat-label">اپلای</span></div>
+              <div class="stat-box"><span class="stat-num" id="statInterview">0</span><span class="stat-label">مصاحبه</span></div>
+              <div class="stat-box"><span class="stat-num" id="statOffer">0</span><span class="stat-label">Offer</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Job Form (hidden by default) -->
+        <div class="card" id="addJobForm" style="display:none">
+          <div class="card-header">
+            <span class="card-icon">➕</span>
+            <span class="card-title">افزودن job</span>
+            <button class="card-action" id="cancelJobBtn">✕</button>
+          </div>
+          <div class="card-body">
+            <div class="form-group"><input type="text" id="jobCompany" placeholder="شرکت"></div>
+            <div class="form-group"><input type="text" id="jobTitle" placeholder="عنوان شغل"></div>
+            <div class="form-group"><input type="url" id="jobUrl" placeholder="لینک آگهی"></div>
+            <div class="form-group">
+              <select id="jobStatus" class="full-input">
+                <option value="saved">💾 ذخیره شده</option>
+                <option value="applied">📤 اپلای شده</option>
+                <option value="interview">🎤 مصاحبه</option>
+                <option value="offer">🎉 Offer</option>
+                <option value="rejected">❌ رد شده</option>
+                <option value="withdrawn">🔙 انصراف</option>
+              </select>
+            </div>
+            <div class="form-group"><textarea id="jobNotes" rows="2" placeholder="یادداشت..."></textarea></div>
+            <button class="btn btn-primary" id="saveJobBtn">💾 ذخیره</button>
+          </div>
+        </div>
+
+        <!-- Job List -->
+        <div id="jobList"></div>
+      </div>
+
+      <!-- === SEARCH TAB (Job Search) === -->
+      <div class="tab-content" id="search">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-icon">🔍</span>
+            <span class="card-title">سرچ job</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group"><input type="text" id="searchQuery" placeholder="عنوان شغل، مثلاً Data Scientist"></div>
+            <div class="form-row">
+              <div class="form-group half"><input type="text" id="searchLocation" placeholder="محل (Germany)"></div>
+              <div class="form-group half">
+                <select id="searchSource" class="full-input">
+                  <option value="linkedin">LinkedIn</option>
+                  <option value="indeed">Indeed</option>
+                  <option value="stepstone">StepStone</option>
+                  <option value="all">همه</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="searchBtn">🔍 سرچ</button>
+          </div>
+        </div>
+        <div id="searchResults"></div>
       </div>
 
       <!-- === PROFILE TAB === -->

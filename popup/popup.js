@@ -370,6 +370,150 @@ Return ONLY JSON.`;
     } catch { us.textContent = '❌ خطا'; us.style.color = '#f38ba8'; }
   });
 
+  // ==================== JOB TRACKER ====================
+  let jobs = [];
+
+  async function loadJobs() {
+    return new Promise(resolve => {
+      chrome.storage.local.get('jobs', r => { jobs = r.jobs || []; resolve(); });
+    });
+  }
+  async function saveJobs() {
+    return new Promise(resolve => chrome.storage.local.set({ jobs }, resolve));
+  }
+
+  function renderJobs() {
+    const list = document.getElementById('jobList');
+    if (!list) return;
+    if (!jobs.length) { list.innerHTML = '<div class="job-empty">هنوز jobی ذخیره نشده<br>روی ➕ کلیک کن</div>'; updateStats(); return; }
+
+    const icons = { saved: '💾', applied: '📤', interview: '🎤', offer: '🎉', rejected: '❌', withdrawn: '🔙' };
+    const labels = { saved: 'ذخیره', applied: 'اپلای', interview: 'مصاحبه', offer: 'Offer', rejected: 'رد شده', withdrawn: 'انصراف' };
+
+    list.innerHTML = jobs.map((j, i) => `
+      <div class="job-item" data-idx="${i}">
+        <span class="job-icon">${icons[j.status] || '💼'}</span>
+        <div class="job-info">
+          <div class="job-company">${j.company || '—'}</div>
+          <div class="job-title">${j.title || ''}</div>
+        </div>
+        <span class="job-status ${j.status}">${labels[j.status] || j.status}</span>
+        <div class="job-actions">
+          <button onclick="cycleJobStatus(${i})" title="تغییر وضعیت">🔄</button>
+          <button onclick="deleteJob(${i})" title="حذف">🗑️</button>
+        </div>
+      </div>
+    `).join('');
+    updateStats();
+  }
+
+  function updateStats() {
+    const total = jobs.length;
+    const applied = jobs.filter(j => j.status === 'applied').length;
+    const interview = jobs.filter(j => j.status === 'interview').length;
+    const offer = jobs.filter(j => j.status === 'offer').length;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statApplied').textContent = applied;
+    document.getElementById('statInterview').textContent = interview;
+    document.getElementById('statOffer').textContent = offer;
+  }
+
+  window.cycleJobStatus = (idx) => {
+    const flow = ['saved', 'applied', 'interview', 'offer'];
+    const cur = flow.indexOf(jobs[idx].status);
+    jobs[idx].status = flow[(cur + 1) % flow.length];
+    saveJobs(); renderJobs();
+  };
+
+  window.deleteJob = (idx) => {
+    jobs.splice(idx, 1);
+    saveJobs(); renderJobs();
+  };
+
+  document.getElementById('addJobBtn')?.addEventListener('click', () => {
+    document.getElementById('addJobForm').style.display = 'block';
+    document.getElementById('jobCompany').focus();
+  });
+  document.getElementById('cancelJobBtn')?.addEventListener('click', () => {
+    document.getElementById('addJobForm').style.display = 'none';
+  });
+  document.getElementById('saveJobBtn')?.addEventListener('click', async () => {
+    const job = {
+      company: document.getElementById('jobCompany').value.trim(),
+      title: document.getElementById('jobTitle').value.trim(),
+      url: document.getElementById('jobUrl').value.trim(),
+      status: document.getElementById('jobStatus').value,
+      notes: document.getElementById('jobNotes').value.trim(),
+      date: new Date().toISOString()
+    };
+    if (!job.company && !job.title) return;
+    jobs.unshift(job);
+    await saveJobs();
+    renderJobs();
+    document.getElementById('addJobForm').style.display = 'none';
+    ['jobCompany','jobTitle','jobUrl','jobNotes'].forEach(id => document.getElementById(id).value = '');
+    showStatus('✅ job ذخیره شد!', 'success');
+  });
+
+  // ==================== JOB SEARCH ====================
+  document.getElementById('searchBtn')?.addEventListener('click', async () => {
+    const q = document.getElementById('searchQuery').value.trim();
+    const loc = document.getElementById('searchLocation').value.trim();
+    const src = document.getElementById('searchSource').value;
+    if (!q) return;
+
+    const results = document.getElementById('searchResults');
+    results.innerHTML = '<div class="loading-card"><div class="spinner"></div><p>در حال سرچ...</p></div>';
+
+    // Build search URLs for each platform
+    const urls = [];
+    if (src === 'linkedin' || src === 'all') {
+      urls.push({ name: 'LinkedIn', url: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(q)}&location=${encodeURIComponent(loc || 'Germany')}` });
+    }
+    if (src === 'indeed' || src === 'all') {
+      urls.push({ name: 'Indeed', url: `https://www.indeed.com/jobs?q=${encodeURIComponent(q)}&l=${encodeURIComponent(loc || 'Germany')}` });
+    }
+    if (src === 'stepstone' || src === 'all') {
+      urls.push({ name: 'StepStone', url: `https://www.stepstone.de/jobs/${encodeURIComponent(q)}/in-${encodeURIComponent(loc || 'Deutschland')}` });
+    }
+
+    // Use AI to suggest matches based on profile
+    const profile = profiles[currentProfileId]?.data || {};
+    const aiPrompt = `Based on this candidate profile, suggest 5 job search refinements for "${q}" in ${loc || 'Germany'}.
+Profile skills: ${profile.skills || 'N/A'}
+Experience: ${profile.experience || 'N/A'}
+Return JSON: {"suggestions":["suggestion1","suggestion2","suggestion3","suggestion4","suggestion5"],"keywords":["kw1","kw2","kw3"]}`;
+
+    const aiResult = await ai(aiPrompt, 400);
+    let suggestions = {};
+    try { suggestions = aiResult ? JSON.parse(aiResult.match(/\{[\s\S]*\}/)?.[0] || '{}') : {}; } catch {}
+
+    let html = '';
+    if (suggestions.suggestions?.length) {
+      html += `<div class="card"><div class="card-header"><span class="card-icon">💡</span><span class="card-title">پیشنهادات AI</span></div>`;
+      html += `<div class="card-body">${suggestions.suggestions.map(s => `<div style="padding:3px 0;font-size:10px">• ${s}</div>`).join('')}</div></div>`;
+    }
+    if (suggestions.keywords?.length) {
+      html += `<div class="card"><div class="card-header"><span class="card-icon">🏷️</span><span class="card-title">کلمات کلیدی</span></div>`;
+      html += `<div class="card-body">${suggestions.keywords.map(k => `<span class="kw-tag">${k}</span>`).join(' ')}</div></div>`;
+    }
+
+    // Direct links to job boards
+    html += `<div class="card"><div class="card-header"><span class="card-icon">🔗</span><span class="card-title">سرچ مستقیم</span></div><div class="card-body">`;
+    urls.forEach(u => {
+      html += `<div class="search-item">
+        <div class="search-title">${u.name}</div>
+        <div class="search-actions">
+          <a href="${u.url}" target="_blank" class="btn btn-primary" style="font-size:9px;padding:4px 8px;width:auto;display:inline-block;text-decoration:none;color:#1e1e2e">🔍 باز کن</a>
+          <button class="btn btn-secondary" style="font-size:9px;padding:4px 8px;width:auto;display:inline-block" onclick="navigator.clipboard.writeText('${u.url}');showStatus('📋 کپی شد!','success')">📋 کپی لینک</button>
+        </div>
+      </div>`;
+    });
+    html += '</div></div>';
+
+    results.innerHTML = html || '<div class="job-empty">نتیجه‌ای پیدا نشد</div>';
+  });
+
   // ==================== STATUS ====================
   function showStatus(text, type) {
     const s = document.getElementById('statusText');
@@ -382,9 +526,11 @@ Return ONLY JSON.`;
   (async () => {
     await checkOnboarding();
     await loadProfiles();
+    await loadJobs();
     refreshProfileSelect();
     loadProfileToForm();
     checkEmptyState();
+    renderJobs();
 
     // Load settings into form
     chrome.storage.local.get('settings', r => {

@@ -151,3 +151,38 @@ body { width:380px; min-height:500px; font-family:'Segoe UI',Tahoma,sans-serif; 
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-track { background:transparent; }
 ::-webkit-scrollbar-thumb { background:#313244; border-radius:2px; }
+
+/* Tracker Stats */
+.tracker-stats { display:flex; gap:6px; }
+.stat-box { flex:1; text-align:center; padding:8px 4px; background:#181825; border-radius:8px; }
+.stat-num { display:block; font-size:18px; font-weight:700; color:#89b4fa; }
+.stat-label { font-size:9px; color:#585b70; }
+
+/* Job List Items */
+.job-item { display:flex; align-items:center; gap:8px; padding:8px 10px; background:#181825; border:1px solid #313244; border-radius:8px; margin-bottom:4px; cursor:pointer; transition:.15s; }
+.job-item:hover { border-color:#89b4fa; }
+.job-item .job-icon { font-size:16px; flex-shrink:0; }
+.job-item .job-info { flex:1; min-width:0; }
+.job-item .job-company { font-size:11px; font-weight:600; color:#cdd6f4; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.job-item .job-title { font-size:9px; color:#585b70; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.job-item .job-status { font-size:9px; padding:2px 6px; border-radius:4px; flex-shrink:0; }
+.job-item .job-status.saved { background:rgba(137,180,250,0.15); color:#89b4fa; }
+.job-item .job-status.applied { background:rgba(166,227,161,0.15); color:#a6e3a1; }
+.job-item .job-status.interview { background:rgba(249,226,175,0.15); color:#f9e2af; }
+.job-item .job-status.offer { background:rgba(166,227,161,0.25); color:#a6e3a1; }
+.job-item .job-status.rejected { background:rgba(243,139,168,0.15); color:#f38ba8; }
+.job-item .job-status.withdrawn { background:rgba(88,91,112,0.3); color:#585b70; }
+.job-item .job-actions { display:flex; gap:2px; flex-shrink:0; }
+.job-item .job-actions button { background:none; border:none; cursor:pointer; font-size:11px; padding:2px; }
+.job-empty { text-align:center; padding:20px; color:#585b70; font-size:11px; }
+
+/* Search Results */
+.search-item { padding:10px; background:#181825; border:1px solid #313244; border-radius:8px; margin-bottom:4px; }
+.search-item .search-title { font-size:12px; font-weight:600; color:#89b4fa; margin-bottom:2px; }
+.search-item .search-company { font-size:10px; color:#a6adc8; }
+.search-item .search-meta { font-size:9px; color:#585b70; margin-top:4px; }
+.search-item .search-actions { display:flex; gap:4px; margin-top:6px; }
+.search-item .search-actions .btn { font-size:9px; padding:4px 8px; width:auto; display:inline-block; }
+
+/* Keword Tags */
+.kw-tag { display:inline-block; background:rgba(137,180,250,0.1); color:#89b4fa; padding:2px 8px; border-radius:4px; font-size:10px; margin:2px; }

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AutoFill Pro — اپلای هوشمند",
-  "version": "4.0.0",
-  "description": "Smart Chrome extension that auto-fills job application forms from client resumes (AI-powered)",
+  "version": "5.0.0",
+  "description": "AI-powered job application tool: autofill, cover letters, job tracker, and search",
   "permissions": [
     "activeTab",
     "storage",
