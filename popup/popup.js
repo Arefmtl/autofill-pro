@@ -370,6 +370,58 @@ Return ONLY JSON.`;
     } catch { us.textContent = '❌ خطا'; us.style.color = '#f38ba8'; }
   });
 
+  // ==================== CAREER CHAT ====================
+  const chatMessages = document.getElementById('chatMessages');
+  const chatInput = document.getElementById('chatInput');
+  const chatSendBtn = document.getElementById('chatSendBtn');
+
+  function addChatMsg(text, type) {
+    if (!chatMessages) return;
+    const div = document.createElement('div');
+    div.className = `chat-msg ${type}`;
+    div.innerHTML = `<div class="chat-bubble">${text.replace(/\n/g, '<br>')}</div>`;
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function showTyping() {
+    if (!chatMessages) return;
+    const div = document.createElement('div');
+    div.className = 'chat-msg ai';
+    div.id = 'chatTyping';
+    div.innerHTML = '<div class="chat-typing"><span></span><span></span><span></span></div>';
+    chatMessages.appendChild(div);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  }
+
+  function removeTyping() {
+    document.getElementById('chatTyping')?.remove();
+  }
+
+  async function sendChat(message) {
+    if (!message || !message.trim()) return;
+    chatInput.value = '';
+    addChatMsg(message, 'user');
+    showTyping();
+
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    chrome.tabs.sendMessage(tab.id, { action: 'careerChat', message }, (resp) => {
+      removeTyping();
+      if (resp?.reply) {
+        addChatMsg(resp.reply, 'ai');
+      } else {
+        addChatMsg('❌ خطا — دوباره امتحان کن', 'ai');
+      }
+    });
+  }
+
+  window.sendChat = sendChat;
+
+  if (chatSendBtn) chatSendBtn.addEventListener('click', () => sendChat(chatInput.value));
+  if (chatInput) chatInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(chatInput.value); }
+  });
+
   // ==================== JOB TRACKER ====================
   let jobs = [];
 

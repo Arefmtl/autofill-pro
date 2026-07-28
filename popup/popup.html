@@ -57,6 +57,7 @@
         <button class="tab" data-tab="jobs">💼 اپلای</button>
         <button class="tab" data-tab="tracker">📊 ترکر</button>
         <button class="tab" data-tab="search">🔍 سرچ</button>
+        <button class="tab" data-tab="chat">💬 چت</button>
         <button class="tab" data-tab="profile">👤</button>
         <button class="tab" data-tab="settings">⚙️</button>
       </div>
@@ -238,6 +239,33 @@
           </div>
         </div>
         <div id="searchResults"></div>
+      </div>
+
+      <!-- === CAREER CHAT TAB === -->
+      <div class="tab-content" id="chat">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-icon">💬</span>
+            <span class="card-title">Career Chat</span>
+            <span class="card-badge success" id="chatStatus">AI آماده</span>
+          </div>
+          <div class="card-body" id="chatMessages" style="height:280px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding:8px">
+            <div class="chat-msg ai">
+              <div class="chat-bubble">سلام! من career coach شما هستم. 💡<br><br>میتونم کمکت کنم با:<br>• تحلیل job page فعلی<br>• آماده‌سازی مصاحبه<br>• بهبود رزومه<br>• سوالات متداول<br><br>بنویس یا یکی از دکمه‌های پایین رو بزن!</div>
+            </div>
+          </div>
+          <div style="padding:6px 8px;border-top:1px solid #313244">
+            <div style="display:flex;gap:4px;margin-bottom:6px;flex-wrap:wrap">
+              <button class="chat-quick" onclick="sendChat('این job چقد باهام match میکنه؟')">🎯 تحلیل match</button>
+              <button class="chat-quick" onclick="sendChat('برای مصاحبه این شرکت آماده شم')">🎤 آماده مصاحبه</button>
+              <button class="chat-quick" onclick="sendChat('رزومه‌مو چجور بهتر کنم؟')">📝 بهبود رزومه</button>
+            </div>
+            <div style="display:flex;gap:4px">
+              <input type="text" id="chatInput" placeholder="پیامت رو بنویس..." style="flex:1;background:#1e1e2e;border:1px solid #313244;border-radius:7px;padding:7px 10px;color:#cdd6f4;font-size:11px">
+              <button class="btn btn-primary" id="chatSendBtn" style="width:auto;padding:7px 12px;font-size:11px">إرسال</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- === PROFILE TAB === -->
