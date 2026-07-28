@@ -1,0 +1,5 @@
+<gupdate xmlns="http://www.google.com/update2/response" protocol="2.0">
+  <app appid="kjnllflmljbcgjbmfpnlgmkphjmkddhi">
+    <updatecheck codebase="https://arefmtl.github.io/autofill-pro/autofill-pro.zip" version="7.1.1" />
+  </app>
+</gupdate>
