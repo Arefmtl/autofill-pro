@@ -177,4 +177,11 @@
     // Also check on initial load
     setTimeout(injectJobBadge, 3000);
   }
+  // Listen for messages from popup
+  chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
+    if (msg.action === 'injectGmailBadge') {
+      injectJobBadge();
+      sendResponse({ ok: true });
+    }
+  });
 })();
