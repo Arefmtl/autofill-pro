@@ -124,9 +124,77 @@
       </div>
       <!-- Settings -->
       <div class="pnl" data-p="settings" style="display:none">
-        <div class="card"><div class="ch"><span>🤖</span><span class="t">API Key</span><span style="font-size:9px;color:#22c55e" id="afp-as">✅ Active</span></div><div class="cb"><input type="password" class="inp" id="afp-ak" placeholder="API Key..."><a href="https://opencode.ai" target="_blank" style="font-size:9px;color:#89b4fa;text-decoration:none">🔑 Get free key →</a></div></div>
-        <div class="card"><div class="ch"><span>⚙️</span><span class="t">Settings</span></div><div class="cb"><label style="display:flex;justify-content:space-between;align-items:center;font-size:11px"><span>Auto-fill</span><input type="checkbox" id="afp-at2" checked></label></div></div>
-        <button class="btn bp bf" id="afp-ss2">💾 Save</button>
+        <!-- API Key Card -->
+        <div class="card">
+          <div class="ch"><span>🤖</span><span class="t">API Key</span><span style="font-size:9px" id="afp-as">⚠️ Not set</span></div>
+          <div class="cb">
+            <input type="password" class="inp" id="afp-ak" placeholder="API Key...">
+            <div style="display:flex;gap:4px;margin-bottom:6px">
+              <button class="btn bp" id="afp-test-key" style="flex:1;font-size:10px;padding:6px">🧪 Test</button>
+              <button class="btn bs" id="afp-show-key" style="font-size:10px;padding:6px">👁️</button>
+            </div>
+            <div id="afp-key-result" style="display:none;padding:6px 8px;border-radius:6px;font-size:10px;margin-bottom:6px"></div>
+            <a href="https://opencode.ai" target="_blank" style="font-size:9px;color:#89b4fa;text-decoration:none">🔑 Get free key →</a>
+          </div>
+        </div>
+
+        <!-- Model Settings -->
+        <div class="card">
+          <div class="ch"><span>🧠</span><span class="t">AI Model</span></div>
+          <div class="cb">
+            <select class="sel" id="afp-model">
+              <option value="mimo-2.5">Mimo 2.5 (Default)</option>
+              <option value="groq/llama-3.3-70b-versatile">Groq Llama 3.3 70B</option>
+              <option value="gpt-4o-mini">GPT-4o Mini</option>
+              <option value="claude-3-haiku">Claude 3 Haiku</option>
+            </select>
+            <div style="font-size:9px;color:#585b70">AI model for cover letters, analysis, chat</div>
+          </div>
+        </div>
+
+        <!-- Auto-fill Settings -->
+        <div class="card">
+          <div class="ch"><span>⚙️</span><span class="t">Auto-fill</span></div>
+          <div class="cb">
+            <label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:8px">
+              <span>Enable auto-fill</span>
+              <input type="checkbox" id="afp-at2" checked>
+            </label>
+            <label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:8px">
+              <span>Skip filled fields</span>
+              <input type="checkbox" id="afp-skip-filled" checked>
+            </label>
+            <label style="display:flex;justify-content:space-between;align-items:center;font-size:11px;margin-bottom:8px">
+              <span>Highlight filled fields</span>
+              <input type="checkbox" id="afp-highlight-filled" checked>
+            </label>
+          </div>
+        </div>
+
+        <!-- Language Settings -->
+        <div class="card">
+          <div class="ch"><span>🌐</span><span class="t">Language</span></div>
+          <div class="cb">
+            <select class="sel" id="afp-lang">
+              <option value="auto">Auto-detect</option>
+              <option value="en">English</option>
+              <option value="de">Deutsch</option>
+              <option value="fa">فارسی</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- About -->
+        <div class="card">
+          <div class="ch"><span>ℹ️</span><span class="t">About</span></div>
+          <div class="cb">
+            <div style="font-size:10px;color:#585b70;margin-bottom:4px">AutoFill Pro v7.1.1</div>
+            <div style="font-size:9px;color:#45475a">Free & Open Source • GitHub: Arefmtl</div>
+            <a href="https://github.com/Arefmtl/autofill-pro" target="_blank" style="font-size:9px;color:#89b4fa;text-decoration:none;display:block;margin-top:4px">📦 View on GitHub</a>
+          </div>
+        </div>
+
+        <button class="btn bp bf" id="afp-ss2">💾 Save All Settings</button>
       </div>
     </div>
     <div class="sb" id="afp-sb2"></div>
@@ -182,8 +250,19 @@
 
   // Load settings
   chrome.storage.local.get(['resumeData', 'profile', 'settings', 'jobs'], r => {
-    const k = r.settings?.apiKey || '';
-    if (k) { document.getElementById('afp-ak').value = k; document.getElementById('afp-as').textContent = '✅ Active'; }
+    const s = r.settings || {};
+    const k = s.apiKey || '';
+    if (k) {
+      document.getElementById('afp-ak').value = k;
+      document.getElementById('afp-as').textContent = '✅ Active';
+      document.getElementById('afp-as').style.color = '#a6e3a1';
+    }
+    // Load other settings
+    if (s.model) document.getElementById('afp-model').value = s.model;
+    if (s.lang) document.getElementById('afp-lang').value = s.lang;
+    if (s.autoFillEnabled !== undefined) document.getElementById('afp-at2').checked = s.autoFillEnabled;
+    if (s.skipFilled !== undefined) document.getElementById('afp-skip-filled').checked = s.skipFilled;
+    if (s.highlightFilled !== undefined) document.getElementById('afp-highlight-filled').checked = s.highlightFilled;
     renderJobs(r.jobs || []);
   });
 
@@ -260,8 +339,99 @@
   document.getElementById('afp-ss2')?.addEventListener('click', () => {
     const k = document.getElementById('afp-ak').value.trim();
     const af = document.getElementById('afp-at2').checked;
-    chrome.storage.local.set({ settings: { apiKey: k, autoFillEnabled: af } });
-    document.getElementById('afp-as').textContent = k ? '✅ Active' : '❌ No key';
+    const model = document.getElementById('afp-model')?.value || 'mimo-2.5';
+    const lang = document.getElementById('afp-lang')?.value || 'auto';
+    const skipFilled = document.getElementById('afp-skip-filled')?.checked ?? true;
+    const highlightFilled = document.getElementById('afp-highlight-filled')?.checked ?? true;
+    chrome.storage.local.set({
+      settings: { apiKey: k, autoFillEnabled: af, model, lang, skipFilled, highlightFilled }
+    });
+    document.getElementById('afp-as').textContent = k ? '✅ Active' : '⚠️ Not set';
+    document.getElementById('afp-as').style.color = k ? '#a6e3a1' : '#f9e2af';
+  });
+
+  // Test API Key
+  document.getElementById('afp-test-key')?.addEventListener('click', async () => {
+    const key = document.getElementById('afp-ak').value.trim();
+    const result = document.getElementById('afp-key-result');
+    const status = document.getElementById('afp-as');
+
+    if (!key) {
+      result.style.display = 'block';
+      result.style.background = 'rgba(243,139,168,0.1)';
+      result.style.color = '#f38ba8';
+      result.textContent = '❌ Please enter an API key first';
+      return;
+    }
+
+    result.style.display = 'block';
+    result.style.background = 'rgba(137,180,250,0.1)';
+    result.style.color = '#89b4fa';
+    result.textContent = '⏳ Testing API key...';
+    status.textContent = '⏳ Testing...';
+    status.style.color = '#89b4fa';
+
+    try {
+      const resp = await fetch('https://api.opencode.ai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: 'mimo-2.5',
+          messages: [{ role: 'user', content: 'Say "API test successful!" in 5 words or less.' }],
+          max_tokens: 20
+        })
+      });
+
+      if (resp.ok) {
+        const d = await resp.json();
+        const reply = d.choices?.[0]?.message?.content || 'OK';
+        result.style.background = 'rgba(166,227,161,0.1)';
+        result.style.color = '#a6e3a1';
+        result.innerHTML = `✅ API key is valid!<br><span style="color:#585b70">Response: ${reply.substring(0, 50)}</span>`;
+        status.textContent = '✅ Active';
+        status.style.color = '#a6e3a1';
+      } else if (resp.status === 401) {
+        result.style.background = 'rgba(243,139,168,0.1)';
+        result.style.color = '#f38ba8';
+        result.textContent = '❌ Invalid API key (401 Unauthorized)';
+        status.textContent = '❌ Invalid';
+        status.style.color = '#f38ba8';
+      } else if (resp.status === 429) {
+        result.style.background = 'rgba(249,226,175,0.1)';
+        result.style.color = '#f9e2af';
+        result.textContent = '⚠️ Rate limited (429) — key is valid but too many requests';
+        status.textContent = '⚠️ Rate limited';
+        status.style.color = '#f9e2af';
+      } else {
+        result.style.background = 'rgba(243,139,168,0.1)';
+        result.style.color = '#f38ba8';
+        result.textContent = `❌ Error: HTTP ${resp.status}`;
+        status.textContent = '❌ Error';
+        status.style.color = '#f38ba8';
+      }
+    } catch (e) {
+      result.style.background = 'rgba(243,139,168,0.1)';
+      result.style.color = '#f38ba8';
+      result.textContent = `❌ Connection error: ${e.message}`;
+      status.textContent = '❌ Error';
+      status.style.color = '#f38ba8';
+    }
+  });
+
+  // Show/Hide API Key
+  document.getElementById('afp-show-key')?.addEventListener('click', () => {
+    const input = document.getElementById('afp-ak');
+    const btn = document.getElementById('afp-show-key');
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = '🙈';
+    } else {
+      input.type = 'password';
+      btn.textContent = '👁️';
+    }
   });
 
   // File upload
