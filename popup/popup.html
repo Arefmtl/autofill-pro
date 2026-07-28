@@ -62,6 +62,12 @@
         <button class="tab" data-tab="settings">⚙️</button>
       </div>
 
+      <!-- Quick Links -->
+      <div style="display:flex;gap:4px;padding:4px 12px;border-bottom:1px solid #313244">
+        <a href="#" id="openTracker" style="font-size:9px;color:#89b4fa;text-decoration:none">📊 Full Tracker</a>
+        <a href="#" id="openRetouch" style="font-size:9px;color:#89b4fa;text-decoration:none">✨ Resume Retouch</a>
+      </div>
+
       <!-- === UPLOAD TAB (First step) === -->
       <div class="tab-content active" id="upload">
         <div id="uploadIdle">
@@ -100,6 +106,13 @@
           <span class="ats-label">📍 ATS:</span>
           <span id="atsName" class="ats-name">تشخیص...</span>
           <span id="atsUrl" class="ats-url"></span>
+        </div>
+
+        <!-- Quick Actions Row -->
+        <div style="display:flex;gap:4px;margin-bottom:6px">
+          <button class="btn btn-secondary" id="gmailBtn" style="flex:1;font-size:10px;padding:6px">📧 Gmail</button>
+          <button class="btn btn-secondary" id="referralBtn" style="flex:1;font-size:10px;padding:6px">👥 Referral</button>
+          <button class="btn btn-secondary" id="highlightsBtn" style="flex:1;font-size:10px;padding:6px">🎯 Highlights</button>
         </div>
 
         <!-- JD Summary Card -->

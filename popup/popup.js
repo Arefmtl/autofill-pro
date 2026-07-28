@@ -281,6 +281,43 @@ Return ONLY JSON.`;
   }
 
   document.getElementById('analyzeBtn')?.addEventListener('click', analyzePage);
+
+  // Gmail Integration button
+  document.getElementById('gmailBtn')?.addEventListener('click', async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab.url?.includes('mail.google.com')) {
+      chrome.tabs.sendMessage(tab.id, { action: 'injectGmailBadge' });
+      showStatus('📧 Gmail integration active', 'success');
+    } else {
+      showStatus('📧 Gmail tab khedam kon', 'warning');
+    }
+  });
+
+  // Referral Finder button
+  document.getElementById('referralBtn')?.addEventListener('click', async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    chrome.tabs.sendMessage(tab.id, { action: 'showReferral' });
+    showStatus('👥 Referral panel opened', 'success');
+  });
+
+  // JD Highlights button
+  document.getElementById('highlightsBtn')?.addEventListener('click', async () => {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const profile = profiles[currentProfileId]?.data || {};
+    const keywords = (profile.skills || '').split(',').map(s => s.trim()).filter(s => s.length > 2);
+    if (keywords.length === 0) {
+      showStatus('⚠️ Pahle resume upload karo', 'warning');
+      return;
+    }
+    chrome.tabs.sendMessage(tab.id, { action: 'highlightKeywords', keywords }, (resp) => {
+      if (resp?.highlighted > 0) {
+        showStatus(`🎯 ${resp.highlighted} keywords highlighted`, 'success');
+      } else {
+        showStatus('⚠️ Koi keyword nahi mila', 'warning');
+      }
+    });
+  });
+
   document.getElementById('fillBtn')?.addEventListener('click', async () => {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     chrome.tabs.sendMessage(tab.id, { action: 'fillForms' });
@@ -368,6 +405,16 @@ Return ONLY JSON.`;
         us.style.color = '#a6e3a1';
       }
     } catch { us.textContent = '❌ خطا'; us.style.color = '#f38ba8'; }
+  });
+
+  // ==================== QUICK LINKS ====================
+  document.getElementById('openTracker')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: chrome.runtime.getURL('popup/tracker.html') });
+  });
+  document.getElementById('openRetouch')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    chrome.tabs.create({ url: chrome.runtime.getURL('popup/retouch.html') });
   });
 
   // ==================== CAREER CHAT ====================

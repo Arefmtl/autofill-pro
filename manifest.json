@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "AutoFill Pro — اپلای هوشمند",
-  "version": "5.0.0",
-  "description": "AI-powered job application tool: autofill, cover letters, job tracker, and search",
+  "version": "7.0.0",
+  "description": "AI-powered job application tool: autofill, cover letters, job tracker, search, Gmail, referrals",
   "permissions": [
     "activeTab",
     "storage",
@@ -22,6 +22,49 @@
       "js": ["content/content.js"],
       "css": [],
       "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content/gmail-integration.js"],
+      "css": [],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://linkedin.com/*",
+        "https://*.linkedin.com/*",
+        "https://greenhouse.io/*",
+        "https://*.greenhouse.io/*",
+        "https://lever.co/*",
+        "https://*.lever.co/*",
+        "https://workday.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://ashbyhq.com/*",
+        "https://*.ashbyhq.com/*",
+        "https://smartrecruiters.com/*",
+        "https://*.smartrecruiters.com/*",
+        "https://icims.com/*",
+        "https://*.icims.com/*",
+        "https://taleo.net/*",
+        "https://*.taleo.net/*",
+        "https://workable.com/*",
+        "https://*.workable.com/*",
+        "https://stepstone.de/*",
+        "https://*.stepstone.de/*",
+        "https://xing.com/*",
+        "https://*.xing.com/*",
+        "https://indeed.com/*",
+        "https://*.indeed.com/*",
+        "https://glassdoor.com/*",
+        "https://*.glassdoor.com/*",
+        "https://monster.de/*",
+        "https://*.monster.de/*",
+        "https://arbeitsagentur.de/*",
+        "https://*.arbeitsagentur.de/*"
+      ],
+      "js": ["content/referral-finder.js"],
+      "css": [],
+      "run_at": "document_idle"
     }
   ],
   "background": {
@@ -29,7 +72,7 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["lib/*", "background/ai.js", "logo.png", "utils/crypto.js"],
+      "resources": ["lib/*", "background/ai.js", "logo.png", "utils/crypto.js", "popup/tracker.html", "popup/retouch.html"],
       "matches": ["<all_urls>"]
     }
   ],
@@ -52,6 +95,17 @@
     "https://monster.de/*",
     "https://*.monster.de/*",
     "https://arbeitsagentur.de/*",
-    "https://*.arbeitsagentur.de/*"
+    "https://*.arbeitsagentur.de/*",
+    "https://mail.google.com/*",
+    "https://greenhouse.io/*",
+    "https://*.greenhouse.io/*",
+    "https://lever.co/*",
+    "https://*.lever.co/*",
+    "https://workday.com/*",
+    "https://*.myworkdayjobs.com/*",
+    "https://ashbyhq.com/*",
+    "https://*.ashbyhq.com/*",
+    "https://smartrecruiters.com/*",
+    "https://*.smartrecruiters.com/*"
   ]
 }

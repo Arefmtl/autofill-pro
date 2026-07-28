@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoFill Pro — Resume Retouch</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1e1e2e; color: #cdd6f4; font-family: 'Segoe UI', Tahoma, sans-serif; min-height: 100vh; padding: 16px; }
+    
+    .container { max-width: 700px; margin: 0 auto; }
+    .header { text-align: center; margin-bottom: 20px; }
+    .header h1 { font-size: 20px; color: #89b4fa; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .header p { font-size: 11px; color: #585b70; margin-top: 4px; }
+
+    .card { background: #181825; border: 1px solid #313244; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+    .card h3 { font-size: 13px; color: #89b4fa; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+    
+    .resume-preview { background: #1e1e2e; border: 1px solid #313244; border-radius: 8px; padding: 12px; max-height: 300px; overflow-y: auto; font-size: 11px; line-height: 1.6; white-space: pre-wrap; }
+    
+    .suggestion { background: #1e1e2e; border-left: 3px solid; border-radius: 0 6px 6px 0; padding: 10px 12px; margin-bottom: 8px; font-size: 11px; }
+    .suggestion.improve { border-color: #f9e2af; }
+    .suggestion.add { border-color: #a6e3a1; }
+    .suggestion.remove { border-color: #f38ba8; }
+    .suggestion-label { font-size: 9px; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; }
+    .suggestion.improve .suggestion-label { color: #f9e2af; }
+    .suggestion.add .suggestion-label { color: #a6e3a1; }
+    .suggestion.remove .suggestion-label { color: #f38ba8; }
+
+    .score-ring { display: flex; align-items: center; justify-content: center; margin: 12px 0; }
+    .score-ring svg { width: 80px; height: 80px; }
+    .score-text { font-size: 18px; font-weight: 700; fill: #89b4fa; }
+    .score-label { font-size: 9px; fill: #585b70; }
+
+    .btn { border: none; border-radius: 6px; padding: 8px 16px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .btn-primary { background: linear-gradient(135deg, #89b4fa, #cba6f7); color: #1e1e2e; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: #313244; color: #a6adc8; }
+    .btn-secondary:hover { background: #45475a; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 20px; color: #585b70; }
+    .spinner { width: 16px; height: 16px; border: 2px solid #313244; border-top-color: #89b4fa; border-radius: 50%; animation: spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty { text-align: center; padding: 30px; color: #45475a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>✨ Resume Retouch</h1>
+      <p>AI-powered resume improvement suggestions</p>
+    </div>
+
+    <div class="card">
+      <h3>📄 Your Resume</h3>
+      <div class="resume-preview" id="resumePreview">Loading...</div>
+    </div>
+
+    <div class="card">
+      <h3>🎯 ATS Score</h3>
+      <div class="score-ring">
+        <svg viewBox="0 0 80 80">
+          <circle cx="40" cy="40" r="35" fill="none" stroke="#313244" stroke-width="4"/>
+          <circle cx="40" cy="40" r="35" fill="none" stroke="#89b4fa" stroke-width="4" stroke-dasharray="220" stroke-dashoffset="220" stroke-linecap="round" transform="rotate(-90 40 40)" id="scoreRing"/>
+          <text x="40" y="38" text-anchor="middle" class="score-text" id="scoreText">—</text>
+          <text x="40" y="50" text-anchor="middle" class="score-label">ATS Score</text>
+        </svg>
+      </div>
+      <div style="text-align:center">
+        <button class="btn btn-primary" id="analyzeBtn">🔍 Analyze Resume</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>💡 Suggestions</h3>
+      <div id="suggestions">
+        <div class="empty">Click "Analyze Resume" to get suggestions</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>✨ Retouch</h3>
+      <p style="font-size:10px;color:#585b70;margin-bottom:8px">Select an area to improve:</p>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn btn-secondary retouch-btn" data-section="summary">📝 Summary</button>
+        <button class="btn btn-secondary retouch-btn" data-section="experience">💼 Experience</button>
+        <button class="btn btn-secondary retouch-btn" data-section="skills">🛠️ Skills</button>
+        <button class="btn btn-secondary retouch-btn" data-section="education">🎓 Education</button>
+        <button class="btn btn-secondary retouch-btn" data-section="all">🎯 All</button>
+      </div>
+      <div id="retouchResult"></div>
+    </div>
+  </div>
+
+  <script>
+    let profile = {};
+    
+    // Load resume
+    chrome.storage.local.get(['resumeData', 'profile'], (r) => {
+      profile = { ...(r.resumeData || {}), ...(r.profile || {}) };
+      const preview = document.getElementById('resumePreview');
+      if (profile.fullName) {
+        preview.textContent = [
+          `Name: ${profile.fullName}`,
+          `Email: ${profile.email || ''}`,
+          `Phone: ${profile.phone || ''}`,
+          `Location: ${profile.city || ''}, ${profile.country || ''}`,
+          '',
+          'Summary:',
+          profile.summary || 'No summary provided',
+          '',
+          'Experience:',
+          profile.experience || 'No experience provided',
+          '',
+          'Skills:',
+          profile.skills || 'No skills provided',
+          '',
+          'Education:',
+          profile.education || 'No education provided'
+        ].join('\n');
+      } else {
+        preview.textContent = '❌ No resume uploaded. Go to popup → Upload tab first.';
+      }
+    });
+
+    // Analyze resume
+    document.getElementById('analyzeBtn').addEventListener('click', async () => {
+      const btn = document.getElementById('analyzeBtn');
+      const sugDiv = document.getElementById('suggestions');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Analyzing...';
+      sugDiv.innerHTML = '<div class="loading"><span class="spinner"></span> AI analyzing your resume...</div>';
+
+      try {
+        const resp = await chrome.runtime.sendMessage({
+          action: 'retouchResume',
+          resume: profile,
+          mode: 'analyze'
+        });
+        
+        if (resp?.score !== undefined) {
+          // Animate score
+          const ring = document.getElementById('scoreRing');
+          const text = document.getElementById('scoreText');
+          const offset = 220 - (220 * resp.score / 100);
+          ring.style.transition = 'stroke-dashoffset 1s ease';
+          ring.style.strokeDashoffset = offset;
+          text.textContent = resp.score + '%';
+          
+          if (resp.score >= 80) ring.style.stroke = '#a6e3a1';
+          else if (resp.score >= 60) ring.style.stroke = '#f9e2af';
+          else ring.style.stroke = '#f38ba8';
+        }
+        
+        if (resp?.suggestions?.length > 0) {
+          sugDiv.innerHTML = resp.suggestions.map(s => `
+            <div class="suggestion ${s.type}">
+              <div class="suggestion-label">${s.type === 'improve' ? '🔧 Improve' : s.type === 'add' ? '➕ Add' : '➖ Remove'}</div>
+              <div>${s.text}</div>
+            </div>
+          `).join('');
+        } else {
+          sugDiv.innerHTML = '<div class="empty">No suggestions — resume looks good! 🎉</div>';
+        }
+      } catch (e) {
+        sugDiv.innerHTML = '<div class="empty">❌ Error: ' + e.message + '</div>';
+      }
+      
+      btn.disabled = false;
+      btn.innerHTML = '🔍 Analyze Resume';
+    });
+
+    // Retouch section
+    document.querySelectorAll('.retouch-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const section = btn.dataset.section;
+        const resultDiv = document.getElementById('retouchResult');
+        resultDiv.innerHTML = '<div class="loading"><span class="spinner"></span> Improving ' + section + '...</div>';
+        btn.disabled = true;
+        
+        try {
+          const resp = await chrome.runtime.sendMessage({
+            action: 'retouchResume',
+            resume: profile,
+            mode: 'retouch',
+            section: section
+          });
+          
+          if (resp?.improved) {
+            resultDiv.innerHTML = `
+              <div style="background:#1e1e2e;border:1px solid #a6e3a1;border-radius:8px;padding:12px;margin-top:8px">
+                <div style="font-size:10px;color:#a6e3a1;font-weight:600;margin-bottom:6px">✨ Improved ${section}:</div>
+                <div style="font-size:11px;color:#cdd6f4;white-space:pre-wrap">${resp.improved}</div>
+                <button class="btn btn-primary" style="margin-top:8px" onclick="navigator.clipboard.writeText(\`${resp.improved.replace(/`/g, '\\`')}\`).then(()=>this.textContent='✅ Copied!')">📋 Copy</button>
+              </div>
+            `;
+          }
+        } catch (e) {
+          resultDiv.innerHTML = '<div class="empty">❌ Error: ' + e.message + '</div>';
+        }
+        
+        btn.disabled = false;
+      });
+    });
+  </script>
+</body>
+</html>

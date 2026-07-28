@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoFill Pro — Job Tracker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #1e1e2e; color: #cdd6f4; font-family: 'Segoe UI', Tahoma, sans-serif; min-height: 100vh; padding: 16px; }
+    
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .header h1 { font-size: 18px; color: #89b4fa; display: flex; align-items: center; gap: 8px; }
+    .header .stats { display: flex; gap: 12px; }
+    .header .stat { text-align: center; }
+    .header .stat-num { font-size: 20px; font-weight: 700; color: #89b4fa; }
+    .header .stat-label { font-size: 10px; color: #585b70; }
+
+    .board { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 16px; min-height: calc(100vh - 100px); }
+    
+    .column { flex: 0 0 260px; background: #181825; border-radius: 12px; padding: 12px; border: 1px solid #313244; }
+    .column-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid; }
+    .column-header h3 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .column-count { background: #313244; color: #a6adc8; padding: 2px 8px; border-radius: 10px; font-size: 10px; }
+    
+    .column.saved .column-header { border-color: #6c7086; }
+    .column.saved h3 { color: #6c7086; }
+    .column.applied .column-header { border-color: #89b4fa; }
+    .column.applied h3 { color: #89b4fa; }
+    .column.interview .column-header { border-color: #f9e2af; }
+    .column.interview h3 { color: #f9e2af; }
+    .column.offer .column-header { border-color: #a6e3a1; }
+    .column.offer h3 { color: #a6e3a1; }
+    .column.rejected .column-header { border-color: #f38ba8; }
+    .column.rejected h3 { color: #f38ba8; }
+
+    .card { background: #1e1e2e; border: 1px solid #313244; border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: grab; transition: all 0.15s; }
+    .card:hover { border-color: #89b4fa; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .card.dragging { opacity: 0.5; transform: rotate(2deg); }
+    .card-company { font-size: 11px; font-weight: 600; color: #89b4fa; margin-bottom: 4px; }
+    .card-title { font-size: 10px; color: #cdd6f4; margin-bottom: 6px; line-height: 1.3; }
+    .card-meta { display: flex; justify-content: space-between; align-items: center; }
+    .card-date { font-size: 9px; color: #585b70; }
+    .card-actions { display: flex; gap: 4px; }
+    .card-actions button { background: none; border: none; cursor: pointer; font-size: 12px; padding: 2px; }
+    
+    .empty { text-align: center; padding: 20px 10px; color: #45475a; font-size: 11px; }
+
+    /* Add Job Form */
+    .add-form { background: #181825; border: 1px solid #313244; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: none; }
+    .add-form.active { display: block; }
+    .add-form h3 { font-size: 12px; color: #89b4fa; margin-bottom: 12px; }
+    .form-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .form-input { flex: 1; background: #1e1e2e; border: 1px solid #313244; border-radius: 6px; padding: 8px 10px; color: #cdd6f4; font-size: 11px; }
+    .form-input:focus { outline: none; border-color: #89b4fa; }
+    .form-select { background: #1e1e2e; border: 1px solid #313244; border-radius: 6px; padding: 8px 10px; color: #cdd6f4; font-size: 11px; }
+    .btn { border: none; border-radius: 6px; padding: 8px 16px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .btn-primary { background: linear-gradient(135deg, #89b4fa, #cba6f7); color: #1e1e2e; }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-secondary { background: #313244; color: #a6adc8; }
+    .btn-secondary:hover { background: #45475a; }
+    .btn-danger { background: #f38ba8; color: #1e1e2e; }
+    .btn-danger:hover { opacity: 0.9; }
+
+    /* Floating Add Button */
+    .fab { position: fixed; bottom: 24px; right: 24px; width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #89b4fa, #cba6f7); border: none; color: #1e1e2e; font-size: 24px; cursor: pointer; box-shadow: 0 4px 16px rgba(137,180,250,0.4); transition: all 0.2s; z-index: 100; }
+    .fab:hover { transform: scale(1.1); }
+
+    /* Drag indicator */
+    .column.drag-over { background: #1e1e2e; border-color: #89b4fa; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>📊 Job Tracker</h1>
+    <div class="stats" id="stats"></div>
+  </div>
+
+  <div class="add-form" id="addForm">
+    <h3>➕ Add Job</h3>
+    <div class="form-row">
+      <input class="form-input" id="addCompany" placeholder="Company">
+      <input class="form-input" id="addTitle" placeholder="Job Title">
+    </div>
+    <div class="form-row">
+      <input class="form-input" id="addUrl" placeholder="Job URL (optional)">
+      <select class="form-select" id="addStatus">
+        <option value="saved">💾 Saved</option>
+        <option value="applied">📤 Applied</option>
+        <option value="interview">🎤 Interview</option>
+        <option value="offer">🎉 Offer</option>
+        <option value="rejected">❌ Rejected</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <input class="form-input" id="addNotes" placeholder="Notes (optional)">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-secondary" id="cancelAdd">Cancel</button>
+      <button class="btn btn-primary" id="saveAdd">💾 Save Job</button>
+    </div>
+  </div>
+
+  <div class="board" id="board"></div>
+  <button class="fab" id="addBtn">+</button>
+
+  <script>
+    let jobs = [];
+    const COLUMNS = ['saved', 'applied', 'interview', 'offer', 'rejected'];
+    const COLUMN_LABELS = { saved: '💾 Saved', applied: '📤 Applied', interview: '🎤 Interview', offer: '🎉 Offer', rejected: '❌ Rejected' };
+
+    // Load jobs
+    chrome.storage.local.get('jobs', (r) => {
+      jobs = r.jobs || [];
+      render();
+    });
+
+    function render() {
+      const board = document.getElementById('board');
+      const stats = document.getElementById('stats');
+      
+      // Stats
+      const counts = {};
+      COLUMNS.forEach(c => counts[c] = 0);
+      jobs.forEach(j => { if (counts[j.status] !== undefined) counts[j.status]++; });
+      
+      stats.innerHTML = `
+        <div class="stat"><div class="stat-num">${jobs.length}</div><div class="stat-label">Total</div></div>
+        <div class="stat"><div class="stat-num" style="color:#a6e3a1">${counts.offer}</div><div class="stat-label">Offers</div></div>
+        <div class="stat"><div class="stat-num" style="color:#f9e2af">${counts.interview}</div><div class="stat-label">Interviews</div></div>
+      `;
+
+      // Board
+      board.innerHTML = '';
+      COLUMNS.forEach(col => {
+        const colJobs = jobs.filter(j => j.status === col);
+        const div = document.createElement('div');
+        div.className = `column ${col}`;
+        div.dataset.status = col;
+        div.innerHTML = `
+          <div class="column-header">
+            <h3>${COLUMN_LABELS[col]}</h3>
+            <span class="column-count">${colJobs.length}</span>
+          </div>
+          <div class="column-body" data-status="${col}">
+            ${colJobs.length === 0 ? '<div class="empty">No jobs here</div>' : ''}
+            ${colJobs.map(j => `
+              <div class="card" draggable="true" data-id="${j.id}">
+                <div class="card-company">${j.company}</div>
+                <div class="card-title">${j.title}</div>
+                <div class="card-meta">
+                  <span class="card-date">${j.date ? new Date(j.date).toLocaleDateString() : ''}</span>
+                  <div class="card-actions">
+                    ${j.url ? `<a href="${j.url}" target="_blank" title="Open">🔗</a>` : ''}
+                    <button onclick="deleteJob('${j.id}')" title="Delete">🗑️</button>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+        board.appendChild(div);
+      });
+
+      // Drag and drop
+      setupDragDrop();
+    }
+
+    function setupDragDrop() {
+      document.querySelectorAll('.card').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          e.dataTransfer.setData('text/plain', card.dataset.id);
+          card.classList.add('dragging');
+        });
+        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+      });
+
+      document.querySelectorAll('.column-body').forEach(col => {
+        col.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          col.closest('.column').classList.add('drag-over');
+        });
+        col.addEventListener('dragleave', () => {
+          col.closest('.column').classList.remove('drag-over');
+        });
+        col.addEventListener('drop', (e) => {
+          e.preventDefault();
+          col.closest('.column').classList.remove('drag-over');
+          const jobId = e.dataTransfer.getData('text/plain');
+          const newStatus = col.dataset.status;
+          moveJob(jobId, newStatus);
+        });
+      });
+    }
+
+    function moveJob(id, newStatus) {
+      const job = jobs.find(j => j.id === id);
+      if (job) {
+        job.status = newStatus;
+        job.lastUpdated = new Date().toISOString();
+        chrome.storage.local.set({ jobs });
+        render();
+      }
+    }
+
+    function deleteJob(id) {
+      jobs = jobs.filter(j => j.id !== id);
+      chrome.storage.local.set({ jobs });
+      render();
+    }
+
+    // Add job form
+    document.getElementById('addBtn').addEventListener('click', () => {
+      document.getElementById('addForm').classList.toggle('active');
+    });
+    document.getElementById('cancelAdd').addEventListener('click', () => {
+      document.getElementById('addForm').classList.remove('active');
+    });
+    document.getElementById('saveAdd').addEventListener('click', () => {
+      const company = document.getElementById('addCompany').value.trim();
+      const title = document.getElementById('addTitle').value.trim();
+      const url = document.getElementById('addUrl').value.trim();
+      const status = document.getElementById('addStatus').value;
+      const notes = document.getElementById('addNotes').value.trim();
+      
+      if (!company || !title) return;
+      
+      jobs.unshift({
+        id: Date.now().toString(),
+        company, title, url, status, notes,
+        date: new Date().toISOString()
+      });
+      chrome.storage.local.set({ jobs });
+      render();
+      document.getElementById('addForm').classList.remove('active');
+      document.getElementById('addCompany').value = '';
+      document.getElementById('addTitle').value = '';
+      document.getElementById('addUrl').value = '';
+      document.getElementById('addNotes').value = '';
+    });
+  </script>
+</body>
+</html>
