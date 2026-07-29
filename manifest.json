@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AutoFill Pro — اپلای هوشمند",
-  "version": "8.0.0",
+  "version": "8.2.0",
   "description": "Smart job application assistant: auto-detect jobs, match score, Gmail sync, autofill",
   "update_url": "https://arefmtl.github.io/autofill-pro/updates.xml",
   "permissions": [

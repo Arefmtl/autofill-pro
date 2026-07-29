@@ -27,6 +27,24 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
 
+  // Test API key
+  if (msg.action === 'testApiKey') {
+    fetch('https://api.opencode.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${msg.key}`
+      },
+      body: JSON.stringify({
+        model: 'mimo-2.5',
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_tokens: 5
+      })
+    }).then(r => sendResponse({ valid: r.ok }))
+      .catch(() => sendResponse({ valid: false }));
+    return true;
+  }
+
   // Storage operations (from sidebar)
   if (msg.action === 'getProfile') {
     chrome.storage.local.get(['profile', 'resumeData', 'settings'], r => sendResponse(r));
