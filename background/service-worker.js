@@ -97,6 +97,116 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     });
     return true;
   }
+
+  // Gmail Auth
+  if (msg.action === 'gmailLogin') {
+    chrome.identity.getAuthToken({ interactive: true }, (token) => {
+      if (chrome.runtime.lastError) {
+        sendResponse({ error: chrome.runtime.lastError.message });
+      } else {
+        chrome.storage.local.set({ gmailToken: token });
+        sendResponse({ success: true, token });
+      }
+    });
+    return true;
+  }
+  if (msg.action === 'gmailLogout') {
+    chrome.identity.getAuthToken({ interactive: false }, (token) => {
+      if (token) {
+        chrome.identity.removeCachedAuthToken({ token }, () => {
+          fetch(`https://accounts.google.com/o/oauth2/revoke?token=${token}`);
+          chrome.storage.local.remove('gmailToken');
+          sendResponse({ success: true });
+        });
+      } else {
+        sendResponse({ success: true });
+      }
+    });
+    return true;
+  }
+  if (msg.action === 'gmailStatus') {
+    chrome.storage.local.get('gmailToken', (r) => {
+      sendResponse({ loggedIn: !!r.gmailToken });
+    });
+    return true;
+  }
+  if (msg.action === 'gmailUserInfo') {
+    chrome.storage.local.get('gmailToken', async (r) => {
+      const token = r.gmailToken;
+      if (!token) { sendResponse({ error: 'Not logged in' }); return; }
+      try {
+        const resp = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!resp.ok) { sendResponse({ error: 'Failed to get user info' }); return; }
+        const data = await resp.json();
+        sendResponse({ email: data.email, name: data.name });
+      } catch (e) { sendResponse({ error: e.message }); }
+    });
+    return true;
+  }
+
+  // Gmail Sync — scan inbox for job emails
+  if (msg.action === 'gmailSync') {
+    chrome.storage.local.get('gmailToken', async (r) => {
+      const token = r.gmailToken;
+      if (!token) { sendResponse({ error: 'Not logged in' }); return; }
+      try {
+        const lookback = msg.days || 30;
+        const query = `in:inbox newer_than:${lookback}d ({from:greenhouse.io from:lever.co from:myworkdayjobs.com from:ashbyhq.com from:smartrecruiters.com from:icims.com from:bamboohr.com from:indeed.com from:glassdoor.com from:stepstone.de from:xing.com} OR {subject:(interview OR offer OR rejection OR application OR bewerbung OR absage)})`;
+        const listResp = await fetch(`https://www.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=50`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!listResp.ok) { sendResponse({ error: `Gmail API ${listResp.status}` }); return; }
+        const listData = await listResp.json();
+        const messages = listData.messages || [];
+        const results = [];
+        for (const msg of messages.slice(0, 20)) {
+          try {
+            const detResp = await fetch(`https://www.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=metadata`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            if (!detResp.ok) continue;
+            const det = await detResp.json();
+            const hdrs = det.payload?.headers || [];
+            const get = (n) => hdrs.find(h => h.name.toLowerCase() === n.toLowerCase())?.value || '';
+            const subject = get('Subject');
+            const from = get('From');
+            const date = get('Date');
+            const body = det.snippet || '';
+            const text = `${subject} ${body}`.toLowerCase();
+            let status = 'unknown';
+            if (/interview|vorstellungsgespräch|gespräch/i.test(text)) status = 'interview';
+            else if (/rejection|unfortunately|abgelehnt|leider|nicht ausgewählt/i.test(text)) status = 'rejection';
+            else if (/offer|congratulations|angebot|herzlichen|willkommen/i.test(text)) status = 'offer';
+            else if (/assessment|test assignment|coding challenge|aufgabe/i.test(text)) status = 'assessment';
+            else if (/application received|thank you|bewerbung erhalten|vielen dank/i.test(text)) status = 'application';
+            const fromDomain = (from.match(/@([^.]+)/) || [])[1] || '';
+            results.push({ id: msg.id, subject, from, date, snippet: body.substring(0, 200), status, fromDomain });
+          } catch (e) { /* skip failed messages */ }
+        }
+        // Group by status
+        const grouped = { interview: [], rejection: [], offer: [], assessment: [], application: [], unknown: [] };
+        results.forEach(r => { (grouped[r.status] || grouped.unknown).push(r); });
+        sendResponse({ success: true, total: results.length, grouped, results });
+      } catch (e) { sendResponse({ error: e.message }); }
+    });
+    return true;
+  }
+
+  // Job detection routing (from sidebar)
+  if (msg.action === 'detectJob' || msg.action === 'scanPage') {
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, msg, resp => {
+          sendResponse(resp || {});
+        });
+      } else {
+        sendResponse({ error: 'No active tab' });
+      }
+    });
+    return true;
+  }
 });
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {

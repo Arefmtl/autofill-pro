@@ -191,6 +191,22 @@
           </div>
         </div>
 
+        <!-- Google Login Card -->
+        <div class="card">
+          <div class="ch"><span>🔐</span><span class="t">Google Account</span><span style="font-size:9px" id="afp-gs">❌ Not connected</span></div>
+          <div class="cb">
+            <div id="afp-gauth-info" style="display:none;margin-bottom:8px">
+              <div style="font-size:11px;color:#cdd6f4;margin-bottom:4px" id="afp-gauth-email"></div>
+              <div style="font-size:9px;color:#585b70">Gmail sync • Auto job tracking</div>
+            </div>
+            <button class="btn bp" id="afp-glogin" style="width:100%;font-size:11px;padding:8px">🔑 Sign in with Google</button>
+            <div id="afp-gmail-sync" style="display:none;margin-top:8px">
+              <button class="btn bs" id="afp-gsync" style="width:100%;font-size:11px;padding:8px">📧 Sync Gmail</button>
+              <div id="afp-gsync-result" style="display:none;margin-top:6px;padding:6px 8px;border-radius:6px;font-size:10px"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Model Settings -->
         <div class="card">
           <div class="ch"><span>🧠</span><span class="t">AI Model</span></div>
@@ -484,6 +500,77 @@
     } else {
       input.type = 'password';
       btn.textContent = '👁️';
+    }
+  });
+
+  // Google Login
+  document.getElementById('afp-glogin')?.addEventListener('click', async () => {
+    const btn = document.getElementById('afp-glogin');
+    btn.textContent = '⏳ Connecting...';
+    btn.disabled = true;
+    const r = await bgMsg({ action: 'gmailLogin' });
+    if (r?.success) {
+      document.getElementById('afp-gs').textContent = '✅ Connected';
+      document.getElementById('afp-gs').style.color = '#a6e3a1';
+      document.getElementById('afp-gauth-info').style.display = 'block';
+      document.getElementById('afp-gmail-sync').style.display = 'block';
+      btn.textContent = '✅ Connected';
+      btn.style.background = 'rgba(166,227,161,0.15)';
+      btn.style.color = '#a6e3a1';
+      // Get user email
+      const ur = await bgMsg({ action: 'gmailUserInfo' });
+      if (ur?.email) document.getElementById('afp-gauth-email').textContent = ur.email;
+    } else {
+      btn.textContent = '❌ Failed — Try again';
+      btn.disabled = false;
+      btn.style.background = 'rgba(243,139,168,0.15)';
+      btn.style.color = '#f38ba8';
+    }
+  });
+
+  // Gmail Sync
+  document.getElementById('afp-gsync')?.addEventListener('click', async () => {
+    const btn = document.getElementById('afp-gsync');
+    const result = document.getElementById('afp-gsync-result');
+    btn.textContent = '⏳ Scanning inbox...';
+    btn.disabled = true;
+    result.style.display = 'none';
+    const r = await bgMsg({ action: 'gmailSync', days: 30 });
+    if (r?.success) {
+      const g = r.grouped;
+      const summary = [
+        g.interview?.length ? `🎯 ${g.interview.length} interview` : '',
+        g.offer?.length ? `🎉 ${g.offer.length} offer` : '',
+        g.rejection?.length ? `❌ ${g.rejection.length} rejection` : '',
+        g.assessment?.length ? `📝 ${g.assessment.length} assessment` : '',
+        g.application?.length ? `📨 ${g.application.length} application` : ''
+      ].filter(Boolean).join(' • ');
+      result.style.display = 'block';
+      result.style.background = 'rgba(166,227,161,0.1)';
+      result.style.color = '#a6e3a1';
+      result.innerHTML = `✅ Found ${r.total} job emails<br><span style="color:#89b4fa">${summary || 'No job emails found'}</span>`;
+      btn.textContent = '✅ Sync Complete';
+      btn.disabled = false;
+    } else {
+      result.style.display = 'block';
+      result.style.background = 'rgba(243,139,168,0.1)';
+      result.style.color = '#f38ba8';
+      result.textContent = `❌ ${r?.error || 'Sync failed'}`;
+      btn.textContent = '📧 Sync Gmail';
+      btn.disabled = false;
+    }
+  });
+
+  // Check Google login status on load
+  bgMsg({ action: 'gmailStatus' }).then(r => {
+    if (r?.loggedIn) {
+      document.getElementById('afp-gs').textContent = '✅ Connected';
+      document.getElementById('afp-gs').style.color = '#a6e3a1';
+      document.getElementById('afp-gauth-info').style.display = 'block';
+      document.getElementById('afp-gmail-sync').style.display = 'block';
+      document.getElementById('afp-glogin').textContent = '✅ Connected';
+      document.getElementById('afp-glogin').style.background = 'rgba(166,227,161,0.15)';
+      document.getElementById('afp-glogin').style.color = '#a6e3a1';
     }
   });
 
