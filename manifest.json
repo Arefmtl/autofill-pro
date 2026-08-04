@@ -31,7 +31,8 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content/sidebar.js", "content/job-detector.js"],
+      "js": ["content/sidebar.js",
+    "content/cover-letter.js", "content/job-detector.js"],
       "css": [],
       "run_at": "document_idle"
     },
